@@ -39,7 +39,7 @@ public final class ClientScanHandler {
     public static void onContainerRender(ContainerScreenEvent.Render.Foreground event) {
         Minecraft minecraft = Minecraft.getInstance();
         Player player = minecraft.player;
-        if (player == null || !player.getMainHandItem().is(ModItems.AURA_SCANNER.get())) {
+        if (player == null || !canScan(player)) {
             resetHover();
             activeScreen = null;
             return;
@@ -105,7 +105,7 @@ public final class ClientScanHandler {
                         "tooltip.fredplenter.scanning", String.format(Locale.ROOT, "%.1f", remaining / 1_000.0))
                         .withStyle(ChatFormatting.AQUA));
             }
-        } else if (player.getMainHandItem().is(ModItems.AURA_SCANNER.get())) {
+        } else if (canScan(player)) {
             event.getToolTip().add(Component.translatable("tooltip.fredplenter.unstudyable").withStyle(ChatFormatting.GRAY));
         }
     }
@@ -114,5 +114,10 @@ public final class ClientScanHandler {
         hoveredItem = null;
         hoverStartedAt = 0;
         scanSent = false;
+    }
+
+    private static boolean canScan(Player player) {
+        return player.getMainHandItem().is(ModItems.AURA_SCANNER.get())
+                || player.getMainHandItem().is(ModItems.ARCANE_WAND.get());
     }
 }

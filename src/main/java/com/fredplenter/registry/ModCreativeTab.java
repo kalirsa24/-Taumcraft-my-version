@@ -25,6 +25,7 @@ public final class ModCreativeTab {
                         output.accept(ModItems.ARCANE_WAND.get());
                         output.accept(ModItems.AURA_SCANNER.get());
                         output.accept(ModItems.SCRIBING_TOOLS.get());
+                        output.accept(ModItems.INKWELL.get());
                         output.accept(ModItems.ASPECT_CACHE.get());
                         output.accept(ModBlocks.ARCANE_TABLE_ITEM.get());
                         output.accept(ModBlocks.AURA_NODE_ITEM.get());

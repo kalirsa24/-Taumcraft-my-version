@@ -3,6 +3,7 @@ package com.fredplenter.research;
 import com.fredplenter.aspect.Aspect;
 import com.fredplenter.aspect.AspectStack;
 import com.fredplenter.registry.ModItems;
+import com.fredplenter.item.InkwellItem;
 import com.fredplenter.item.ResearchNoteItem;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -131,10 +132,13 @@ public final class ArcaneProgress extends SavedData {
         PlayerState state = state(player.getUUID());
         if (research.method() == Research.Method.PAPER) {
             Inventory inventory = player.getInventory();
-            if (!hasItem(inventory, Items.PAPER)) {
+            if (!hasItem(inventory, Items.PAPER) || !hasInk(inventory)) {
                 return false;
             }
             consumeOne(inventory, Items.PAPER);
+            if (!InkwellItem.consumeInk(player)) {
+                throw new IllegalStateException("Research inkwell ran out of ink after validation");
+            }
             ItemStack note = ModItems.RESEARCH_NOTE.get().createFor(researchId);
             if (!inventory.add(note)) {
                 player.drop(note, false);
@@ -240,6 +244,11 @@ public final class ArcaneProgress extends SavedData {
 
     private static boolean hasItem(Inventory inventory, net.minecraft.world.item.Item item) {
         return inventory.items.stream().anyMatch(stack -> stack.is(item));
+    }
+
+    private static boolean hasInk(Inventory inventory) {
+        return inventory.items.stream().anyMatch(InkwellItem::hasInk)
+                || inventory.offhand.stream().anyMatch(InkwellItem::hasInk);
     }
 
     private static void consumeOne(Inventory inventory, net.minecraft.world.item.Item item) {

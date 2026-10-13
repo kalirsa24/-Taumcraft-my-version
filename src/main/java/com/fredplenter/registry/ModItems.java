@@ -5,6 +5,7 @@ import com.fredplenter.item.ArcaneCodexItem;
 import com.fredplenter.item.ArcaneWandItem;
 import com.fredplenter.item.AspectCacheItem;
 import com.fredplenter.item.AuraScannerItem;
+import com.fredplenter.item.InkwellItem;
 import com.fredplenter.item.ResearchNoteItem;
 import com.fredplenter.item.ScribingToolsItem;
 import net.minecraft.world.item.Item;
@@ -31,6 +32,9 @@ public final class ModItems {
 
     public static final DeferredItem<ScribingToolsItem> SCRIBING_TOOLS = ITEMS.registerItem(
             "scribing_tools", ScribingToolsItem::new, new Item.Properties().stacksTo(1));
+
+    public static final DeferredItem<InkwellItem> INKWELL = ITEMS.registerItem(
+            "inkwell", InkwellItem::new, new Item.Properties().stacksTo(1));
 
     public static final DeferredItem<ResearchNoteItem> RESEARCH_NOTE = ITEMS.registerItem(
             "research_note", ResearchNoteItem::new);

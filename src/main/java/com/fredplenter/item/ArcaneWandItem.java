@@ -87,6 +87,7 @@ public class ArcaneWandItem extends Item {
         int averagePercent = total * 100 / capacity;
         tooltip.add(Component.translatable("tooltip.fredplenter.wand_capacity", total, capacity, averagePercent));
         tooltip.add(Component.translatable("tooltip.fredplenter.wand_shift_hint"));
+        tooltip.add(Component.translatable("tooltip.fredplenter.wand_scan_help"));
     }
 
     private static CompoundTag getStored(ItemStack stack) {

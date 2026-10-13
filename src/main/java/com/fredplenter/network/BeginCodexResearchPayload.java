@@ -51,7 +51,9 @@ public record BeginCodexResearchPayload(ResourceLocation researchId) implements 
                         true);
             } else if (!accepted) {
                 player.displayClientMessage(
-                        Component.translatable("message.fredplenter.research_start_failed"),
+                        Component.translatable(research != null && research.method() == Research.Method.PAPER
+                                ? "message.fredplenter.research_materials_missing"
+                                : "message.fredplenter.research_start_failed"),
                         true);
             }
             NetworkHandler.sendProgress(player);

@@ -5,6 +5,8 @@ import com.fredplenter.research.ClientArcaneProgress;
 import com.fredplenter.network.BeginCodexResearchPayload;
 import com.fredplenter.research.Research;
 import com.fredplenter.research.ResearchRegistry;
+import com.fredplenter.item.InkwellItem;
+import com.fredplenter.registry.ModItems;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -64,7 +66,7 @@ public class ArcaneCodexScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics, mouseX, mouseY, partialTick);
+        drawCosmicBackground(graphics);
         drawBookFrame(graphics);
         drawHeader(graphics);
         drawCategoryRail(graphics);
@@ -84,25 +86,37 @@ public class ArcaneCodexScreen extends Screen {
         int top = frameTop();
         int right = width - left;
         int bottom = height - top;
-        graphics.fill(0, 0, width, height, 0xB9000000);
-        graphics.fill(left, top, right, bottom, 0xFF160F0B);
-        graphics.fill(left + 3, top + 3, right - 3, bottom - 3, 0xFF67472D);
-        graphics.fill(left + 6, top + 6, right - 6, bottom - 6, 0xFF281B13);
-        graphics.fill(left + 8, top + 8, right - 8, top + 28, 0xFF39271A);
-        graphics.fill(left + 8, top + 29, right - 8, bottom - 8, 0xFF171116);
+        graphics.fill(left, top, right, bottom, 0xFF100B20);
+        graphics.fill(left + 3, top + 3, right - 3, bottom - 3, 0xFF62407D);
+        graphics.fill(left + 6, top + 6, right - 6, bottom - 6, 0xFF211533);
+        graphics.fill(left + 8, top + 8, right - 8, top + 28, 0xFF38234D);
+        graphics.fill(left + 8, top + 29, right - 8, bottom - 8, 0xFF130F24);
 
         int railRight = left + SIDEBAR_WIDTH;
-        graphics.fill(left + 9, top + 30, railRight, bottom - 9, 0xFF211914);
-        graphics.fill(railRight, top + 30, railRight + 2, bottom - 9, 0xFF8A6543);
-        graphics.fill(railRight + 2, top + 30, railRight + 4, bottom - 9, 0xFF3C291B);
+        graphics.fill(left + 9, top + 30, railRight, bottom - 9, 0xFF1B142C);
+        graphics.fill(railRight, top + 30, railRight + 2, bottom - 9, 0xFF9B6FC0);
+        graphics.fill(railRight + 2, top + 30, railRight + 4, bottom - 9, 0xFF4A3266);
 
         for (int x = left + 12; x < right - 12; x += 22) {
-            graphics.fill(x, top + 4, x + 1, top + 7, 0xFFAF8A5B);
-            graphics.fill(x + 8, bottom - 7, x + 9, bottom - 4, 0xFFAF8A5B);
+            graphics.fill(x, top + 4, x + 1, top + 7, 0xFFD4B3F3);
+            graphics.fill(x + 8, bottom - 7, x + 9, bottom - 4, 0xFFD4B3F3);
         }
         for (int y = top + 34; y < bottom - 14; y += 19) {
-            graphics.fill(left + 3, y, left + 6, y + 1, 0xFFAF8A5B);
-            graphics.fill(right - 6, y + 7, right - 3, y + 8, 0xFFAF8A5B);
+            graphics.fill(left + 3, y, left + 6, y + 1, 0xFFB485D5);
+            graphics.fill(right - 6, y + 7, right - 3, y + 8, 0xFFB485D5);
+        }
+    }
+
+    private void drawCosmicBackground(GuiGraphics graphics) {
+        graphics.fill(0, 0, width, height, 0xFF080614);
+        graphics.fill(width / 5, 0, width * 2 / 5, height, 0x220D4E78);
+        graphics.fill(width * 3 / 5, 0, width * 4 / 5, height, 0x221E0E49);
+        for (int index = 0; index < 96; index++) {
+            int x = Math.floorMod(index * 73 + 19, Math.max(1, width));
+            int y = Math.floorMod(index * 137 + 41, Math.max(1, height));
+            int size = index % 11 == 0 ? 2 : 1;
+            int color = index % 3 == 0 ? 0xFFC9B0F2 : 0xFF8D83BB;
+            graphics.fill(x, y, x + size, y + size, color);
         }
     }
 
@@ -112,7 +126,7 @@ public class ArcaneCodexScreen extends Screen {
         long learned = research.stream().filter(entry -> ClientArcaneProgress.hasResearch(entry.id())).count();
         String summary = Component.translatable("gui.fredplenter.research_summary", research.size(), learned).getString();
         graphics.drawString(font, summary, width - left - font.width(summary) - 13, top + 13,
-                0xFFD7C49B, false);
+                0xFFE0C8FF, false);
     }
 
     private void drawCategoryRail(GuiGraphics graphics) {
@@ -122,10 +136,10 @@ public class ArcaneCodexScreen extends Screen {
             int x = left + 12;
             int y = top + 42 + index * 30;
             boolean selected = categoryIndex == index;
-            graphics.fill(x, y, x + 25, y + 24, selected ? 0xFF9B754A : 0xFF35251A);
-            graphics.fill(x + 2, y + 2, x + 23, y + 22, selected ? 0xFF4B3625 : 0xFF211912);
+            graphics.fill(x, y, x + 25, y + 24, selected ? 0xFF9A6BC0 : 0xFF38294E);
+            graphics.fill(x + 2, y + 2, x + 23, y + 22, selected ? 0xFF4D3567 : 0xFF21182F);
             graphics.drawCenteredString(font, CATEGORIES.get(index).symbol(), x + 12, y + 7,
-                    selected ? 0xFFFFE69A : 0xFFBCA57C);
+                    selected ? 0xFFFFE7A8 : 0xFFD0B5E9);
         }
     }
 
@@ -141,9 +155,9 @@ public class ArcaneCodexScreen extends Screen {
                 Point parent = nodePosition(prerequisite);
                 boolean unlocked = ClientArcaneProgress.hasResearch(prerequisite.id());
                 drawLine(graphics, parent.x(), parent.y(), child.x(), child.y(),
-                        unlocked ? 0xFFB8A56B : 0xFF51495A);
+                        unlocked ? 0xFFE3BDFF : 0xFF655A7B);
                 if (unlocked) {
-                    drawLine(graphics, parent.x(), parent.y() + 1, child.x(), child.y() + 1, 0x5587D5A1);
+                    drawLine(graphics, parent.x(), parent.y() + 1, child.x(), child.y() + 1, 0x668DCEFF);
                 }
             }
         }
@@ -156,11 +170,11 @@ public class ArcaneCodexScreen extends Screen {
             boolean learned = ClientArcaneProgress.hasResearch(entry.id());
             boolean available = ResearchRegistry.isAvailable(entry, ClientArcaneProgress.getCompletedResearch());
             boolean hovered = distanceSquared(mouseX, mouseY, point.x(), point.y()) <= NODE_RADIUS * NODE_RADIUS;
-            int fill = learned ? 0xFF3E795B : available ? 0xFF846537 : 0xFF292833;
-            int edge = hovered ? 0xFFFFE49A : learned ? 0xFFBAE8A5 : available ? 0xFFE1C27E : 0xFF716A79;
+            int fill = learned ? 0xFF276A68 : available ? 0xFF754C9A : 0xFF28243A;
+            int edge = hovered ? 0xFFFFE9A9 : learned ? 0xFF91E8D6 : available ? 0xFFE4B8FF : 0xFF766C91;
 
             graphics.fill(point.x() - NODE_RADIUS - 2, point.y() - NODE_RADIUS - 2,
-                    point.x() + NODE_RADIUS + 2, point.y() + NODE_RADIUS + 2, 0xFF09080C);
+                    point.x() + NODE_RADIUS + 2, point.y() + NODE_RADIUS + 2, 0xFF090716);
             drawHex(graphics, point.x(), point.y(), NODE_RADIUS + 2, edge);
             drawHex(graphics, point.x(), point.y(), NODE_RADIUS - 2, fill);
             Aspect icon = entry.puzzle().getFirst();
@@ -212,15 +226,15 @@ public class ArcaneCodexScreen extends Screen {
         int boxHeight = lines.size() * 11 + 8;
         int boxX = Mth.clamp(mouseX + 14, 4, width - boxWidth - 4);
         int boxY = Mth.clamp(mouseY + 12, 4, height - boxHeight - 4);
-        graphics.fill(boxX, boxY, boxX + boxWidth, boxY + boxHeight, 0xF0100D18);
-        graphics.fill(boxX, boxY, boxX + boxWidth, boxY + 1, 0xFFFFD77A);
-        graphics.fill(boxX, boxY + boxHeight - 1, boxX + boxWidth, boxY + boxHeight, 0xFF59472B);
-        graphics.fill(boxX, boxY, boxX + 1, boxY + boxHeight, 0xFF87663A);
-        graphics.fill(boxX + boxWidth - 1, boxY, boxX + boxWidth, boxY + boxHeight, 0xFF87663A);
+        graphics.fill(boxX, boxY, boxX + boxWidth, boxY + boxHeight, 0xF0100D20);
+        graphics.fill(boxX, boxY, boxX + boxWidth, boxY + 1, 0xFFE1B5FF);
+        graphics.fill(boxX, boxY + boxHeight - 1, boxX + boxWidth, boxY + boxHeight, 0xFF594172);
+        graphics.fill(boxX, boxY, boxX + 1, boxY + boxHeight, 0xFF9B6FC0);
+        graphics.fill(boxX + boxWidth - 1, boxY, boxX + boxWidth, boxY + boxHeight, 0xFF9B6FC0);
         for (int index = 0; index < lines.size(); index++) {
             int color = index == 0 ? 0xFFFFE77D : index == 1
                     ? (learned ? 0xFF88E28D : available ? 0xFFD8C18A : 0xFF97909E)
-                    : 0xFFE0D7CB;
+                    : 0xFFE7DDF2;
             graphics.drawString(font, lines.get(index), boxX + 6, boxY + 5 + index * 11, color, false);
         }
     }
@@ -249,7 +263,11 @@ public class ArcaneCodexScreen extends Screen {
             return false;
         }
         if (entry.method() == Research.Method.PAPER) {
-            return minecraft.player.getInventory().items.stream().anyMatch(stack -> stack.is(Items.PAPER));
+            boolean hasPaper = minecraft.player.getInventory().items.stream()
+                    .anyMatch(stack -> stack.is(Items.PAPER));
+            boolean hasInkwell = minecraft.player.getInventory().items.stream().anyMatch(InkwellItem::hasInk)
+                    || InkwellItem.hasInk(minecraft.player.getOffhandItem());
+            return hasPaper && hasInkwell;
         }
         return entry.cost().stream().allMatch(cost ->
                 ClientArcaneProgress.getAspectPoints(cost.aspect()) >= cost.amount());

@@ -28,7 +28,8 @@ public record ScanItemPayload(ResourceLocation itemId) implements CustomPacketPa
     public static void handle(ScanItemPayload payload, IPayloadContext context) {
         context.enqueueWork(() -> {
             if (!(context.player() instanceof ServerPlayer player)
-                    || !player.getMainHandItem().is(ModItems.AURA_SCANNER.get())
+                    || !(player.getMainHandItem().is(ModItems.AURA_SCANNER.get())
+                    || player.getMainHandItem().is(ModItems.ARCANE_WAND.get()))
                     || !"minecraft".equals(payload.itemId().getNamespace())
                     || !ModItemCheck.isPresentInOpenMenu(player, payload.itemId())) {
                 return;
