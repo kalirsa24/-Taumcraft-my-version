@@ -16,6 +16,7 @@ public final class ClientArcaneProgress {
     private static final EnumMap<Aspect, Integer> ASPECTS = new EnumMap<>(Aspect.class);
     private static final Set<ResourceLocation> COMPLETED = new HashSet<>();
     private static final Set<ResourceLocation> STUDIED_ITEMS = new HashSet<>();
+    private static final java.util.EnumSet<Aspect> DISCOVERED = java.util.EnumSet.noneOf(Aspect.class);
     private static ResourceLocation lastResearchResultId;
     private static boolean lastResearchResultSucceeded;
     private static ResourceLocation lastResearchStartId;
@@ -29,6 +30,7 @@ public final class ClientArcaneProgress {
         ASPECTS.clear();
         COMPLETED.clear();
         STUDIED_ITEMS.clear();
+        DISCOVERED.clear();
 
         CompoundTag aspects = tag.getCompound("Aspects");
         for (Aspect aspect : Aspect.values()) {
@@ -39,6 +41,18 @@ public final class ClientArcaneProgress {
         }
         readLocations(tag.getList("CompletedResearch", StringTag.TAG_STRING), COMPLETED);
         readLocations(tag.getList("StudiedItems", StringTag.TAG_STRING), STUDIED_ITEMS);
+        ListTag discovered = tag.getList("DiscoveredAspects", StringTag.TAG_STRING);
+        for (int index = 0; index < discovered.size(); index++) {
+            Aspect aspect = Aspect.byId(discovered.getString(index));
+            if (aspect != null) {
+                DISCOVERED.add(aspect);
+            }
+        }
+        for (Aspect aspect : Aspect.values()) {
+            if (aspect.isPrimal()) {
+                DISCOVERED.add(aspect);
+            }
+        }
         revision++;
     }
 
@@ -56,6 +70,14 @@ public final class ClientArcaneProgress {
 
     public static Set<ResourceLocation> getCompletedResearch() {
         return Set.copyOf(COMPLETED);
+    }
+
+    public static boolean hasDiscovered(Aspect aspect) {
+        return DISCOVERED.contains(aspect);
+    }
+
+    public static Set<Aspect> getDiscovered() {
+        return Set.copyOf(DISCOVERED);
     }
 
     public static boolean hasStudiedItem(ResourceLocation id) {

@@ -34,6 +34,14 @@ public final class NetworkHandler {
                 StartResearchPayload.TYPE,
                 StartResearchPayload.STREAM_CODEC,
                 StartResearchPayload::handle);
+        registrar.playToServer(
+                CombineAspectsPayload.TYPE,
+                CombineAspectsPayload.STREAM_CODEC,
+                CombineAspectsPayload::handle);
+        registrar.playToServer(
+                LearnNotePayload.TYPE,
+                LearnNotePayload.STREAM_CODEC,
+                LearnNotePayload::handle);
         registrar.playToClient(
                 ResearchResultPayload.TYPE,
                 ResearchResultPayload.STREAM_CODEC,

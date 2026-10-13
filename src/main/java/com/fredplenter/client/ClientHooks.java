@@ -2,6 +2,8 @@ package com.fredplenter.client;
 
 import com.fredplenter.Fredplenter;
 import com.fredplenter.client.screen.ArcaneCodexScreen;
+import com.fredplenter.client.screen.ResearchNoteScreen;
+import com.fredplenter.item.ResearchNoteItem;
 import com.fredplenter.network.RequestProgressPayload;
 import com.fredplenter.registry.ModItems;
 import net.minecraft.client.Minecraft;
@@ -26,6 +28,14 @@ public final class ClientHooks {
     public static void onRightClickItem(PlayerInteractEvent.RightClickItem event) {
         if (event.getItemStack().is(ModItems.ARCANE_CODEX.get())) {
             Minecraft.getInstance().execute(ClientHooks::openCodex);
+        } else if (event.getItemStack().is(ModItems.RESEARCH_NOTE.get())) {
+            var stack = event.getItemStack();
+            var researchId = ResearchNoteItem.researchId(stack);
+            if (researchId != null) {
+                boolean complete = ResearchNoteItem.isComplete(stack);
+                Minecraft.getInstance().execute(() -> Minecraft.getInstance().setScreen(
+                        new ResearchNoteScreen(researchId, complete)));
+            }
         }
     }
 }

@@ -1,10 +1,12 @@
 package com.fredplenter.client.screen;
 
 import com.fredplenter.aspect.Aspect;
+import com.fredplenter.network.CombineAspectsPayload;
 import com.fredplenter.menu.ArcaneTableMenu;
 import com.fredplenter.network.CompleteResearchPayload;
 import com.fredplenter.network.StartResearchPayload;
 import com.fredplenter.research.ClientArcaneProgress;
+import com.fredplenter.research.HexPosition;
 import com.fredplenter.research.Research;
 import com.fredplenter.research.ResearchRegistry;
 import net.minecraft.client.gui.GuiGraphics;
@@ -15,7 +17,9 @@ import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> {
 
@@ -27,10 +31,14 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
     private static final List<HexPosition> HONEYCOMB = createHoneycomb();
 
     private final List<Research> researchList = new ArrayList<>(ResearchRegistry.all().values());
-    private final List<Aspect> selectedPath = new ArrayList<>(3);
-    private final List<HexPosition> selectedCells = new ArrayList<>(3);
+    private final List<Aspect> selectedPath = new ArrayList<>();
+    private final List<HexPosition> selectedCells = new ArrayList<>();
+    private final Map<HexPosition, Aspect> placedTiles = new HashMap<>();
     private Research selectedResearch;
     private Research activeResearch;
+    private Aspect placementAspect;
+    private Aspect combineFirst;
+    private Aspect combineSecond;
     private boolean awaitingPuzzleResult;
     private boolean awaitingResearchStart;
     private String puzzleFeedback = "";
@@ -76,9 +84,11 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
                     activeResearch = null;
                     selectedPath.clear();
                     selectedCells.clear();
+                    placedTiles.clear();
                 } else {
                     selectedPath.clear();
                     selectedCells.clear();
+                    placedTiles.clear();
                     puzzleFeedback = "message.fredplenter.research_failed";
                 }
             }
@@ -86,6 +96,7 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
                 activeResearch = null;
                 selectedPath.clear();
                 selectedCells.clear();
+                placedTiles.clear();
             }
             rebuildButtons();
         }
@@ -108,11 +119,21 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
                             Component.translatable("gui.fredplenter.begin"),
                             ignored -> beginResearch(selectedResearch))
                     .pos(leftPos + SIDEBAR_WIDTH + 10, topPos + 145)
-                    .size(workspaceWidth() - 20, 17)
+                    .size(Math.max(60, workspaceWidth() - 108), 17)
                     .build();
             button.active = menu.canStartResearch(selectedResearch);
             addRenderableWidget(button);
         }
+        Button combine = Button.builder(Component.translatable("gui.fredplenter.combine_aspects"),
+                        ignored -> combineSelectedAspects())
+                .pos(leftPos + imageWidth - 91, topPos + 145)
+                .size(82, 17)
+                .build();
+        combine.active = combineFirst != null && combineSecond != null
+                && Aspect.combine(combineFirst, combineSecond) != null
+                && menu.getAspectPoints(combineFirst) > 0
+                && menu.getAspectPoints(combineSecond) > 0;
+        addRenderableWidget(combine);
     }
 
     private void buildPuzzleButtons() {
@@ -123,6 +144,7 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
                         ignored -> {
                             selectedPath.clear();
                             selectedCells.clear();
+                            placedTiles.clear();
                             puzzleFeedback = "";
                         })
                 .pos(controlsLeft, topPos + 148)
@@ -134,6 +156,8 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
                             activeResearch = null;
                             selectedPath.clear();
                             selectedCells.clear();
+                            placedTiles.clear();
+                            placementAspect = null;
                             awaitingPuzzleResult = false;
                             awaitingResearchStart = false;
                             puzzleFeedback = "";
@@ -157,6 +181,8 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
         activeResearch = research;
         selectedPath.clear();
         selectedCells.clear();
+        placedTiles.clear();
+        placementAspect = null;
         awaitingResearchStart = true;
         awaitingPuzzleResult = false;
         puzzleFeedback = "";
@@ -164,54 +190,120 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
     }
 
     private void selectHex(HexPosition cell) {
-        Aspect aspect = aspectAt(cell);
-        if (selectedPath.isEmpty()) {
-            if (aspect != activeResearch.puzzle().getFirst()) {
-                puzzleFeedback = "gui.fredplenter.start_with_aspect";
-                return;
+        if (cell.equals(START_CELL)) {
+            if (selectedPath.isEmpty()) {
+                selectedPath.add(activeResearch.puzzle().getFirst());
+                selectedCells.add(cell);
+                puzzleFeedback = "gui.fredplenter.place_aspect_first";
             }
-            selectedPath.add(aspect);
-            selectedCells.add(cell);
-            puzzleFeedback = "";
+            return;
+        }
+        if (selectedPath.isEmpty()) {
+            puzzleFeedback = "gui.fredplenter.start_with_aspect";
             return;
         }
 
-        HexPosition previous = selectedCells.getLast();
-        if (!previous.isAdjacent(cell)) {
+        HexPosition lastCell = selectedCells.getLast();
+        Aspect lastAspect = selectedPath.getLast();
+        if (cell.equals(END_CELL)) {
+            Aspect endAspect = activeResearch.puzzle().getLast();
+            if (!lastCell.isAdjacent(cell)) {
+                puzzleFeedback = "gui.fredplenter.connect_adjacent";
+                return;
+            }
+            if (!selectedPath.contains(activeResearch.puzzle().get(1))) {
+                puzzleFeedback = "gui.fredplenter.need_middle";
+                return;
+            }
+            if (!lastAspect.isLinkedTo(endAspect)) {
+                puzzleFeedback = "gui.fredplenter.tile_not_linked";
+                return;
+            }
+            selectedPath.add(endAspect);
+            selectedCells.add(cell);
+            PacketDistributor.sendToServer(new CompleteResearchPayload(activeResearch.id(), encodePath()));
+            awaitingPuzzleResult = true;
+            puzzleFeedback = "gui.fredplenter.research_waiting";
+            return;
+        }
+
+        if (placedTiles.containsKey(cell)) {
+            if (cell.equals(lastCell)) {
+                placedTiles.remove(cell);
+                selectedPath.removeLast();
+                selectedCells.removeLast();
+                puzzleFeedback = "";
+            }
+            return;
+        }
+        if (!lastCell.isAdjacent(cell)) {
             puzzleFeedback = "gui.fredplenter.connect_adjacent";
             return;
         }
-
-        if (selectedPath.size() == 1) {
-            if (aspect != activeResearch.puzzle().get(1)) {
-                selectedPath.clear();
-                selectedCells.clear();
-                puzzleFeedback = "gui.fredplenter.wrong_path";
-                return;
-            }
-            selectedPath.add(aspect);
-            selectedCells.add(cell);
-            puzzleFeedback = "";
+        if (placementAspect == null) {
+            puzzleFeedback = "gui.fredplenter.place_aspect_first";
             return;
         }
-
-        if (aspect != activeResearch.puzzle().getLast()) {
-            selectedPath.clear();
-            selectedCells.clear();
-            puzzleFeedback = "gui.fredplenter.wrong_path";
+        if (!lastAspect.isLinkedTo(placementAspect)) {
+            puzzleFeedback = "gui.fredplenter.tile_not_linked";
             return;
         }
-
-        selectedPath.add(aspect);
+        long alreadyPlaced = selectedPath.stream().skip(1)
+                .filter(aspect -> aspect == placementAspect).count();
+        if (menu.getAspectPoints(placementAspect) <= alreadyPlaced) {
+            puzzleFeedback = "gui.fredplenter.tile_no_points";
+            return;
+        }
+        placedTiles.put(cell, placementAspect);
+        selectedPath.add(placementAspect);
         selectedCells.add(cell);
-        String encodedSolution = String.join(",", selectedPath.stream().map(Aspect::getId).toList());
-        PacketDistributor.sendToServer(new CompleteResearchPayload(activeResearch.id(), encodedSolution));
-        awaitingPuzzleResult = true;
-        puzzleFeedback = "gui.fredplenter.research_waiting";
+        puzzleFeedback = selectedPath.contains(activeResearch.puzzle().get(1))
+                ? "gui.fredplenter.click_end_to_finish" : "gui.fredplenter.need_middle";
+    }
+
+    private String encodePath() {
+        List<String> encoded = new ArrayList<>(selectedPath.size());
+        for (int index = 0; index < selectedPath.size(); index++) {
+            HexPosition cell = selectedCells.get(index);
+            encoded.add(selectedPath.get(index).getId() + "@" + cell.q() + "," + cell.r());
+        }
+        return String.join(";", encoded);
+    }
+
+    private void combineSelectedAspects() {
+        if (combineFirst == null || combineSecond == null
+                || Aspect.combine(combineFirst, combineSecond) == null) {
+            return;
+        }
+        PacketDistributor.sendToServer(new CombineAspectsPayload(combineFirst.getId(), combineSecond.getId()));
+        combineFirst = null;
+        combineSecond = null;
+        rebuildButtons();
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == 0 && activeResearch == null) {
+            Aspect clickedAspect = findSidebarAspect(mouseX, mouseY);
+            if (clickedAspect != null && ClientArcaneProgress.hasDiscovered(clickedAspect)) {
+                if (combineFirst == null || combineFirst == clickedAspect) {
+                    combineFirst = clickedAspect;
+                } else if (combineSecond == null || combineSecond == clickedAspect) {
+                    combineSecond = clickedAspect;
+                } else {
+                    combineFirst = clickedAspect;
+                    combineSecond = null;
+                }
+                rebuildButtons();
+                return true;
+            }
+        } else if (button == 0 && activeResearch != null) {
+            Aspect clickedAspect = findSidebarAspect(mouseX, mouseY);
+            if (clickedAspect != null && ClientArcaneProgress.hasDiscovered(clickedAspect)) {
+                placementAspect = clickedAspect;
+                return true;
+            }
+        }
         if (activeResearch == null && menu.getResearchNoteId() != null && button == 0) {
             Research clicked = findResearchAt(mouseX, mouseY);
             if (clicked != null) {
@@ -247,6 +339,7 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
         } else {
             graphics.drawCenteredString(font, Component.translatable("gui.fredplenter.table_insert_note"),
                     leftPos + SIDEBAR_WIDTH + 7 + workspaceWidth() / 2, topPos + 82, 0xFF41301C);
+            renderCombinerHint(graphics);
         }
     }
 
@@ -303,19 +396,19 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
     }
 
     private void drawAspectSidebar(GuiGraphics graphics) {
-        int x = leftPos + 12;
-        int row = 0;
+        int index = 0;
         for (Aspect aspect : Aspect.values()) {
-            if (!aspect.isPrimal()) {
-                continue;
+            int aspectX = leftPos + 11 + index % 2 * 41;
+            int aspectY = topPos + 31 + index / 2 * 12;
+            boolean known = ClientArcaneProgress.hasDiscovered(aspect);
+            boolean selected = aspect == combineFirst || aspect == combineSecond || aspect == placementAspect;
+            if (selected) {
+                graphics.fill(aspectX - 3, aspectY - 2, aspectX + 38, aspectY + 12, 0xFFFFD77A);
             }
-            int points = menu.getAspectPoints(aspect);
-            int slotX = x;
-            int y = topPos + 36 + row++ * 16;
-            drawAspectIcon(graphics, slotX, y, aspect, points > 0);
-            if (points > 0) {
-                graphics.drawString(font, Integer.toString(points), slotX + 14, y + 3, 0xFFFFE1AF, false);
-            }
+            drawAspectIcon(graphics, aspectX, aspectY, aspect, known && menu.getAspectPoints(aspect) > 0);
+            graphics.drawString(font, known ? Integer.toString(menu.getAspectPoints(aspect)) : "?",
+                    aspectX + 14, aspectY + 2, known ? 0xFFFFE1AF : 0xFF8A7A5A, false);
+            index++;
         }
         graphics.drawCenteredString(font, Component.translatable("gui.fredplenter.table_note_slot"),
                 leftPos + SIDEBAR_WIDTH / 2, topPos + 134, 0xFFE6C995);
@@ -414,13 +507,9 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
         int x = leftPos + SIDEBAR_WIDTH + 7;
         int y = topPos + 9;
         int workspaceWidth = workspaceWidth();
-        return switch (research.id().getPath()) {
-            case "basic_observation" -> new int[]{x + workspaceWidth * 22 / 100, y + 48};
-            case "aura_survey" -> new int[]{x + workspaceWidth * 64 / 100, y + 70};
-            case "wand_attunement" -> new int[]{x + workspaceWidth * 83 / 100, y + 104};
-            case "aspect_almanac" -> new int[]{x + workspaceWidth * 27 / 100, y + 104};
-            default -> new int[]{x + workspaceWidth * 65 / 100, y + 132};
-        };
+        int workspaceHeight = 145;
+        return new int[]{x + Math.round(workspaceWidth * research.x()),
+                y + Math.round(workspaceHeight * research.y())};
     }
 
     private Research findResearchAt(double mouseX, double mouseY) {
@@ -442,11 +531,13 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
                 .collect(java.util.stream.Collectors.joining(" → "));
         graphics.drawWordWrap(font,
                 Component.translatable("gui.fredplenter.research_path").append(": " + path),
-                x, y, width, 0xFFE0CCAA);
+                x, y, width, 0xFF41301C);
+        String feedback = puzzleFeedback.isEmpty() ? "gui.fredplenter.place_aspect_first" : puzzleFeedback;
+        if (placementAspect != null) {
+            feedback += " [" + Component.translatable(placementAspect.getTranslationKey()).getString() + "]";
+        }
         graphics.drawWordWrap(font,
-                Component.translatable(puzzleFeedback.isEmpty()
-                        ? "gui.fredplenter.choose_link" : puzzleFeedback),
-                x, y + 13, width, 0xFFE0CCAA);
+                Component.translatable(feedback), x, y + 13, width, 0xFF41301C);
     }
 
     private void renderResearchPuzzle(GuiGraphics graphics, int mouseX, int mouseY) {
@@ -468,8 +559,7 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
             drawHex(graphics, centerX, centerY, HEX_SIZE + 2, border);
             drawHex(graphics, centerX, centerY, HEX_SIZE, 0xFFB29361);
             if (aspect != null) {
-                boolean keyNode = aspect == activeResearch.puzzle().getFirst()
-                        || aspect == activeResearch.puzzle().getLast();
+                boolean keyNode = cell.equals(START_CELL) || cell.equals(END_CELL);
                 int aspectColor = keyNode ? aspect.getColor() : shade(aspect.getColor(), 0.76f);
                 drawHex(graphics, centerX, centerY, HEX_SIZE - 2, aspectColor);
                 graphics.drawCenteredString(font, aspectMark(aspect),
@@ -505,24 +595,38 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
     }
 
     private void renderAspectTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
-        int relX = mouseX - leftPos;
-        int relY = mouseY - topPos;
-        int row = 0;
+        Aspect aspect = findSidebarAspect(mouseX, mouseY);
+        if (aspect == null) {
+            return;
+        }
+        List<Component> tooltip = new ArrayList<>();
+        boolean discovered = ClientArcaneProgress.hasDiscovered(aspect);
+        tooltip.add(Component.translatable(discovered
+                ? aspect.getTranslationKey() : "gui.fredplenter.undiscovered"));
+        if (discovered) {
+            tooltip.add(Component.translatable("tooltip.fredplenter.aspect_points",
+                    Component.translatable(aspect.getTranslationKey()), menu.getAspectPoints(aspect)));
+        }
+        if (!aspect.isPrimal()) {
+            List<Aspect> components = aspect.getComponents();
+            tooltip.add(Component.translatable("gui.fredplenter.aspect_recipe",
+                    Component.translatable(components.get(0).getTranslationKey()),
+                    Component.translatable(components.get(1).getTranslationKey())));
+        }
+        graphics.renderTooltip(font, tooltip.stream().map(Component::getVisualOrderText).toList(), mouseX, mouseY);
+    }
+
+    private Aspect findSidebarAspect(double mouseX, double mouseY) {
+        int index = 0;
         for (Aspect aspect : Aspect.values()) {
-            if (!aspect.isPrimal()) {
-                continue;
-            }
-            int x = 10;
-            int y = 36 + row++ * 16;
-            if (relX >= x && relX <= x + 33 && relY >= y && relY < y + 13) {
-                graphics.renderTooltip(font,
-                        Component.translatable("tooltip.fredplenter.aspect_points",
-                                Component.translatable(aspect.getTranslationKey()),
-                                menu.getAspectPoints(aspect)),
-                        mouseX, mouseY);
-                return;
+            int x = leftPos + 11 + index % 2 * 41;
+            int y = topPos + 31 + index / 2 * 12;
+            index++;
+            if (mouseX >= x - 2 && mouseX < x + 38 && mouseY >= y - 2 && mouseY < y + 12) {
+                return aspect;
             }
         }
+        return null;
     }
 
     private void drawAspectIcon(GuiGraphics graphics, int x, int y, Aspect aspect, boolean bright) {
@@ -569,18 +673,13 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
         if (activeResearch == null) {
             return null;
         }
-        if (position.equals(new HexPosition(-1, 0))) {
+        if (position.equals(START_CELL)) {
             return activeResearch.puzzle().getFirst();
         }
-        if (position.equals(new HexPosition(0, 0))) {
-            return activeResearch.puzzle().get(1);
-        }
-        if (position.equals(new HexPosition(1, 0))) {
+        if (position.equals(END_CELL)) {
             return activeResearch.puzzle().getLast();
         }
-        int index = HONEYCOMB.indexOf(position);
-        int aspectIndex = Math.floorMod(index * 7 + 3, Aspect.values().length);
-        return Aspect.values()[aspectIndex];
+        return placedTiles.get(position);
     }
 
     private int[] hexPixel(HexPosition position) {
@@ -637,6 +736,37 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
         return imageWidth - SIDEBAR_WIDTH - 16;
     }
 
+    private void renderCombinerHint(GuiGraphics graphics) {
+        int centerX = leftPos + SIDEBAR_WIDTH + 7 + workspaceWidth() / 2;
+        graphics.drawCenteredString(font, Component.translatable("gui.fredplenter.combine_hint_1"),
+                centerX, topPos + 27, 0xFF41301C);
+        graphics.drawCenteredString(font, Component.translatable("gui.fredplenter.combine_hint_2"),
+                centerX, topPos + 40, 0xFF5A4028);
+        String first = combineFirst == null ? "?"
+                : Component.translatable(combineFirst.getTranslationKey()).getString();
+        String second = combineSecond == null ? "?"
+                : Component.translatable(combineSecond.getTranslationKey()).getString();
+        Aspect result = Aspect.combine(combineFirst, combineSecond);
+        String resultName = result == null ? "?"
+                : Component.translatable(result.getTranslationKey()).getString();
+        graphics.drawCenteredString(font, first + " + " + second + " = " + resultName,
+                centerX, topPos + 55, 0xFF41301C);
+        int y = topPos + 69;
+        for (Aspect aspect : Aspect.values()) {
+            if (aspect.isPrimal()) {
+                continue;
+            }
+            List<Aspect> components = aspect.getComponents();
+            String recipe = Component.translatable(components.get(0).getTranslationKey()).getString()
+                    + " + " + Component.translatable(components.get(1).getTranslationKey()).getString()
+                    + " = " + (ClientArcaneProgress.hasDiscovered(aspect)
+                    ? Component.translatable(aspect.getTranslationKey()).getString() : "???");
+            graphics.drawCenteredString(font, recipe, centerX, y,
+                    ClientArcaneProgress.hasDiscovered(aspect) ? 0xFF2E6B2E : 0xFF8A7A5A);
+            y += 9;
+        }
+    }
+
     @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
     }
@@ -647,11 +777,6 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
         return dx * dx + dy * dy;
     }
 
-    private record HexPosition(int q, int r) {
-        private boolean isAdjacent(HexPosition other) {
-            int deltaQ = other.q - q;
-            int deltaR = other.r - r;
-            return Math.max(Math.abs(deltaQ), Math.max(Math.abs(deltaR), Math.abs(deltaQ + deltaR))) == 1;
-        }
-    }
+    private static final HexPosition START_CELL = new HexPosition(-2, 0);
+    private static final HexPosition END_CELL = new HexPosition(2, 0);
 }

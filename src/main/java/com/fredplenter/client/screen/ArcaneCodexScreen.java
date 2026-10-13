@@ -26,7 +26,7 @@ public class ArcaneCodexScreen extends Screen {
     private static final int FRAME_MARGIN_X = 34;
     private static final int FRAME_MARGIN_Y = 30;
     private static final int SIDEBAR_WIDTH = 48;
-    private static final int NODE_RADIUS = 12;
+    private static final int NODE_RADIUS = 15;
     private static final List<Category> CATEGORIES = List.of(
             new Category("all", "gui.fredplenter.category_all", "*"),
             new Category("foundations", "gui.fredplenter.category_foundations", "F"),
@@ -124,7 +124,7 @@ public class ArcaneCodexScreen extends Screen {
         int left = frameLeft();
         int top = frameTop();
         long learned = research.stream().filter(entry -> ClientArcaneProgress.hasResearch(entry.id())).count();
-        String summary = Component.translatable("gui.fredplenter.research_summary", research.size(), learned).getString();
+        String summary = Component.translatable("gui.fredplenter.research_summary", learned, research.size()).getString();
         graphics.drawString(font, summary, width - left - font.width(summary) - 13, top + 13,
                 0xFFE0C8FF, false);
     }
@@ -318,15 +318,7 @@ public class ArcaneCodexScreen extends Screen {
 
     private boolean matchesCategory(Research entry) {
         String selected = CATEGORIES.get(categoryIndex).id();
-        return switch (selected) {
-            case "all" -> true;
-            case "foundations" -> entry.id().getPath().equals("basic_observation")
-                    || entry.id().getPath().equals("aspect_almanac");
-            case "aura" -> entry.id().getPath().equals("aura_survey");
-            case "wand" -> entry.id().getPath().equals("wand_attunement");
-            case "craft" -> entry.id().getPath().equals("resonant_work");
-            default -> false;
-        };
+        return "all".equals(selected) || selected.equals(entry.category());
     }
 
     private Research findResearchAt(double mouseX, double mouseY) {
@@ -340,21 +332,12 @@ public class ArcaneCodexScreen extends Screen {
     }
 
     private Point nodePosition(Research entry) {
-        float nx;
-        float ny;
-        switch (entry.id().getPath()) {
-            case "basic_observation" -> { nx = 0.46f; ny = 0.31f; }
-            case "aura_survey" -> { nx = 0.64f; ny = 0.47f; }
-            case "wand_attunement" -> { nx = 0.74f; ny = 0.69f; }
-            case "aspect_almanac" -> { nx = 0.29f; ny = 0.49f; }
-            default -> { nx = 0.51f; ny = 0.77f; }
-        }
         int contentLeft = frameLeft() + SIDEBAR_WIDTH + 10;
         int contentTop = frameTop() + 35;
         int contentWidth = Math.max(80, width - frameLeft() - contentLeft - 14);
         int contentHeight = Math.max(80, height - frameTop() - contentTop - 18);
-        return new Point(contentLeft + Math.round(contentWidth * nx),
-                contentTop + Math.round(contentHeight * ny));
+        return new Point(contentLeft + Math.round(contentWidth * entry.x()),
+                contentTop + Math.round(contentHeight * entry.y()));
     }
 
     @Override

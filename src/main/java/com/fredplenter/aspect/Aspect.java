@@ -68,6 +68,40 @@ public enum Aspect {
         return parentA == null && parentB == null;
     }
 
+    public static Aspect byId(String id) {
+        for (Aspect aspect : values()) {
+            if (aspect.id.equals(id)) {
+                return aspect;
+            }
+        }
+        return null;
+    }
+
+    public static Aspect combine(Aspect first, Aspect second) {
+        if (first == null || second == null || first == second) {
+            return null;
+        }
+        for (Aspect aspect : values()) {
+            if (aspect.parentA != null
+                    && (aspect.parentA == first && aspect.parentB == second
+                    || aspect.parentA == second && aspect.parentB == first)) {
+                return aspect;
+            }
+        }
+        return null;
+    }
+
+    public boolean isLinkedTo(Aspect other) {
+        if (other == null || other == this) {
+            return false;
+        }
+        List<Aspect> components = getComponents();
+        List<Aspect> otherComponents = other.getComponents();
+        return components.contains(other)
+                || otherComponents.contains(this)
+                || components.stream().anyMatch(otherComponents::contains);
+    }
+
     public List<Aspect> getComponents() {
         List<Aspect> list = new ArrayList<>();
         if (parentA != null) list.add(parentA);

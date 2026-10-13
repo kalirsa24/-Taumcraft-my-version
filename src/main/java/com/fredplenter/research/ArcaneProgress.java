@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -69,7 +70,9 @@ public final class ArcaneProgress extends SavedData {
         }
         for (AspectStack reward : rewards) {
             addPoints(state, reward.aspect(), reward.amount());
+            state.discoveredAspects.add(reward.aspect());
         }
+        ensurePrimals(state);
         setDirty();
         return true;
     }
@@ -82,7 +85,9 @@ public final class ArcaneProgress extends SavedData {
         }
         for (AspectStack reward : rewards) {
             addPoints(state, reward.aspect(), reward.amount());
+            state.discoveredAspects.add(reward.aspect());
         }
+        ensurePrimals(state);
         setDirty();
         return true;
     }
@@ -91,8 +96,43 @@ public final class ArcaneProgress extends SavedData {
         if (amount <= 0) {
             throw new IllegalArgumentException("Aspect points must be positive");
         }
-        addPoints(state(playerId), aspect, amount);
+        PlayerState state = state(playerId);
+        addPoints(state, aspect, amount);
+        state.discoveredAspects.add(aspect);
+        ensurePrimals(state);
         setDirty();
+    }
+
+    public boolean hasDiscovered(UUID playerId, Aspect aspect) {
+        PlayerState state = state(playerId);
+        ensurePrimals(state);
+        return state.discoveredAspects.contains(aspect);
+    }
+
+    public Set<Aspect> getDiscovered(UUID playerId) {
+        PlayerState state = state(playerId);
+        ensurePrimals(state);
+        return Set.copyOf(state.discoveredAspects);
+    }
+
+    public boolean combineAspects(UUID playerId, Aspect first, Aspect second) {
+        Aspect result = Aspect.combine(first, second);
+        if (result == null) {
+            return false;
+        }
+        PlayerState state = state(playerId);
+        ensurePrimals(state);
+        if (!state.discoveredAspects.contains(first) || !state.discoveredAspects.contains(second)
+                || state.aspects.getOrDefault(first, 0) < 1
+                || state.aspects.getOrDefault(second, 0) < 1) {
+            return false;
+        }
+        addPoints(state, first, -1);
+        addPoints(state, second, -1);
+        addPoints(state, result, 1);
+        state.discoveredAspects.add(result);
+        setDirty();
+        return true;
     }
 
     public boolean hasResearch(UUID playerId, ResourceLocation researchId) {
@@ -158,10 +198,19 @@ public final class ArcaneProgress extends SavedData {
         return true;
     }
 
-    public boolean completeResearch(ServerPlayer player, ResourceLocation researchId, List<Aspect> solution) {
+    public boolean completeResearch(ServerPlayer player, ResourceLocation researchId,
+                                    List<Aspect> solution, List<HexPosition> path) {
         Research research = ResearchRegistry.get(researchId);
         if (research == null || research.method() != Research.Method.PAPER
-                || !research.puzzle().equals(solution)) {
+                || research.puzzle().size() != 3
+                || solution.size() != path.size()
+                || solution.size() < 3
+                || solution.size() > 19
+                || solution.getFirst() != research.puzzle().getFirst()
+                || solution.getLast() != research.puzzle().getLast()
+                || !solution.contains(research.puzzle().get(1))
+                || !path.getFirst().equals(new HexPosition(-2, 0))
+                || !path.getLast().equals(new HexPosition(2, 0))) {
             return false;
         }
 
@@ -169,15 +218,33 @@ public final class ArcaneProgress extends SavedData {
         if (!ResearchRegistry.isAvailable(research, state.completedResearch)) {
             return false;
         }
-        for (AspectStack cost : research.cost()) {
-            if (state.aspects.getOrDefault(cost.aspect(), 0) < cost.amount()) {
+        ensurePrimals(state);
+        Map<Aspect, Integer> placedCost = new EnumMap<>(Aspect.class);
+        Set<HexPosition> visited = new HashSet<>();
+        for (int index = 0; index < solution.size(); index++) {
+            HexPosition cell = path.get(index);
+            Aspect aspect = solution.get(index);
+            if (!cell.isOnBoard() || !visited.add(cell)
+                    || index > 0 && !path.get(index - 1).isAdjacent(cell)) {
+                return false;
+            }
+            if (index > 0 && index < solution.size() - 1) {
+                if (!state.discoveredAspects.contains(aspect)) {
+                    return false;
+                }
+                placedCost.merge(aspect, 1, Integer::sum);
+            }
+            if (index > 0 && !solution.get(index - 1).isLinkedTo(aspect)) {
                 return false;
             }
         }
 
-        for (AspectStack cost : research.cost()) {
-            addPoints(state, cost.aspect(), -cost.amount());
+        for (Map.Entry<Aspect, Integer> cost : placedCost.entrySet()) {
+            if (state.aspects.getOrDefault(cost.getKey(), 0) < cost.getValue()) {
+                return false;
+            }
         }
+        placedCost.forEach((aspect, amount) -> addPoints(state, aspect, -amount));
         setDirty();
         return true;
     }
@@ -207,6 +274,8 @@ public final class ArcaneProgress extends SavedData {
         snapshot.put("CompletedResearch", stringList(state.completedResearch.stream().map(ResourceLocation::toString).toList()));
         snapshot.put("StudiedItems", stringList(state.studiedItems.stream().map(ResourceLocation::toString).toList()));
         snapshot.put("StudiedNodes", stringList(new ArrayList<>(state.studiedNodes)));
+        snapshot.put("DiscoveredAspects",
+                stringList(getDiscovered(playerId).stream().map(Aspect::getId).toList()));
         return snapshot;
     }
 
@@ -234,7 +303,17 @@ public final class ArcaneProgress extends SavedData {
     }
 
     private PlayerState state(UUID playerId) {
-        return players.computeIfAbsent(playerId, ignored -> new PlayerState());
+        PlayerState state = players.computeIfAbsent(playerId, ignored -> new PlayerState());
+        ensurePrimals(state);
+        return state;
+    }
+
+    private static void ensurePrimals(PlayerState state) {
+        for (Aspect aspect : Aspect.values()) {
+            if (aspect.isPrimal()) {
+                state.discoveredAspects.add(aspect);
+            }
+        }
     }
 
     private static void addPoints(PlayerState state, Aspect aspect, int amount) {
@@ -274,6 +353,7 @@ public final class ArcaneProgress extends SavedData {
         private final Set<ResourceLocation> completedResearch = new HashSet<>();
         private final Set<ResourceLocation> studiedItems = new HashSet<>();
         private final Set<String> studiedNodes = new HashSet<>();
+        private final Set<Aspect> discoveredAspects = EnumSet.noneOf(Aspect.class);
 
         private CompoundTag save() {
             CompoundTag tag = new CompoundTag();
@@ -285,6 +365,8 @@ public final class ArcaneProgress extends SavedData {
             tag.put("CompletedResearch", stringList(completedResearch.stream().map(ResourceLocation::toString).toList()));
             tag.put("StudiedItems", stringList(studiedItems.stream().map(ResourceLocation::toString).toList()));
             tag.put("StudiedNodes", stringList(new ArrayList<>(studiedNodes)));
+            tag.put("DiscoveredAspects",
+                    stringList(discoveredAspects.stream().map(Aspect::getId).toList()));
             return tag;
         }
 
@@ -299,6 +381,21 @@ public final class ArcaneProgress extends SavedData {
             }
             readLocations(tag.getList("CompletedResearch", StringTag.TAG_STRING), state.completedResearch);
             readLocations(tag.getList("StudiedItems", StringTag.TAG_STRING), state.studiedItems);
+            ListTag discovered = tag.getList("DiscoveredAspects", StringTag.TAG_STRING);
+            for (int index = 0; index < discovered.size(); index++) {
+                Aspect aspect = Aspect.byId(discovered.getString(index));
+                if (aspect != null) {
+                    state.discoveredAspects.add(aspect);
+                }
+            }
+            if (!tag.contains("DiscoveredAspects", CompoundTag.TAG_LIST)) {
+                for (Map.Entry<Aspect, Integer> entry : state.aspects.entrySet()) {
+                    if (entry.getValue() > 0) {
+                        state.discoveredAspects.add(entry.getKey());
+                    }
+                }
+            }
+            ensurePrimals(state);
             ListTag nodes = tag.getList("StudiedNodes", StringTag.TAG_STRING);
             for (int i = 0; i < nodes.size(); i++) {
                 state.studiedNodes.add(nodes.getString(i));

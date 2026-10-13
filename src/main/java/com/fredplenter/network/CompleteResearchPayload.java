@@ -3,6 +3,7 @@ package com.fredplenter.network;
 import com.fredplenter.Fredplenter;
 import com.fredplenter.aspect.Aspect;
 import com.fredplenter.menu.ArcaneTableMenu;
+import com.fredplenter.research.HexPosition;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -37,8 +38,9 @@ public record CompleteResearchPayload(ResourceLocation researchId, String soluti
                 return;
             }
 
-            List<Aspect> selected = parseSolution(payload.solution());
-            if (selected == null || !menu.completeResearch(player, payload.researchId(), selected)) {
+            ParsedSolution selected = parseSolution(payload.solution());
+            if (selected == null || !menu.completeResearch(
+                    player, payload.researchId(), selected.aspects(), selected.cells())) {
                 PacketDistributor.sendToPlayer(player, new ResearchResultPayload(payload.researchId(), false));
                 player.displayClientMessage(
                         net.minecraft.network.chat.Component.translatable("message.fredplenter.research_failed"), true);
@@ -51,24 +53,33 @@ public record CompleteResearchPayload(ResourceLocation researchId, String soluti
         });
     }
 
-    private static List<Aspect> parseSolution(String value) {
-        if (value.isBlank() || value.length() > 128) {
+    private static ParsedSolution parseSolution(String value) {
+        if (value.isBlank() || value.length() > 512) {
             return null;
         }
-        List<Aspect> result = new ArrayList<>();
-        for (String id : value.split(",", -1)) {
-            Aspect found = null;
-            for (Aspect aspect : Aspect.values()) {
-                if (aspect.getId().equals(id)) {
-                    found = aspect;
-                    break;
-                }
-            }
-            if (found == null) {
+        List<Aspect> aspects = new ArrayList<>();
+        List<HexPosition> cells = new ArrayList<>();
+        for (String entry : value.split(";", -1)) {
+            String[] parts = entry.split("@", -1);
+            if (parts.length != 2) {
                 return null;
             }
-            result.add(found);
+            Aspect aspect = Aspect.byId(parts[0]);
+            String[] coordinates = parts[1].split(",", -1);
+            if (aspect == null || coordinates.length != 2) {
+                return null;
+            }
+            try {
+                aspects.add(aspect);
+                cells.add(new HexPosition(Integer.parseInt(coordinates[0]), Integer.parseInt(coordinates[1])));
+            } catch (NumberFormatException exception) {
+                return null;
+            }
         }
-        return List.copyOf(result);
+        return aspects.size() < 3 || aspects.size() > 19
+                ? null : new ParsedSolution(List.copyOf(aspects), List.copyOf(cells));
+    }
+
+    private record ParsedSolution(List<Aspect> aspects, List<HexPosition> cells) {
     }
 }

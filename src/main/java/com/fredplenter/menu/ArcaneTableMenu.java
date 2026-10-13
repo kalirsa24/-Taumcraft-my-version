@@ -7,6 +7,7 @@ import com.fredplenter.research.Research;
 import com.fredplenter.research.ResearchRegistry;
 import com.fredplenter.aspect.Aspect;
 import com.fredplenter.research.ArcaneProgress;
+import com.fredplenter.research.HexPosition;
 import com.fredplenter.item.ResearchNoteItem;
 import com.fredplenter.registry.ModItems;
 import net.minecraft.core.BlockPos;
@@ -117,12 +118,13 @@ public class ArcaneTableMenu extends AbstractContainerMenu {
         return true;
     }
 
-    public boolean completeResearch(ServerPlayer player, ResourceLocation researchId, java.util.List<Aspect> solution) {
+    public boolean completeResearch(ServerPlayer player, ResourceLocation researchId,
+                                    java.util.List<Aspect> solution, java.util.List<HexPosition> path) {
         if (!researchId.equals(activeResearch)
                 || blockEntity == null
                 || !isNoteFor(ResearchRegistry.get(researchId))
                 || ResearchNoteItem.isComplete(getNoteStack())
-                || !ArcaneProgress.get(player).completeResearch(player, researchId, solution)) {
+                || !ArcaneProgress.get(player).completeResearch(player, researchId, solution, path)) {
             return false;
         }
         ResearchNoteItem.markComplete(getNoteStack());
