@@ -64,6 +64,19 @@ public final class ResearchRegistry {
         register("deep_resonance", "wand", 0.86f, 0.84f, Research.Method.PAPER,
                 List.of(id("wand_capacity"), id("node_attunement")),
                 List.of(Aspect.FLAMMA, Aspect.AESTUS, Aspect.LUX));
+        register("focal_casting", "wand", 0.62f, 0.92f, Research.Method.ASPECTS,
+                List.of(id("wand_attunement")),
+                List.of(Aspect.FLATUS, Aspect.FLAMMA, Aspect.LUX),
+                new AspectStack(Aspect.FLATUS, 2), new AspectStack(Aspect.LUX, 2),
+                new AspectStack(Aspect.MOTUS, 2));
+        register("verdant_weaving", "wand", 0.46f, 0.94f, Research.Method.ASPECTS,
+                List.of(id("focal_casting")),
+                List.of(Aspect.HUMUS, Aspect.PULVIS, Aspect.VITA),
+                new AspectStack(Aspect.HUMUS, 3), new AspectStack(Aspect.PULVIS, 2));
+        register("dread_weaving", "wand", 0.78f, 0.92f, Research.Method.ASPECTS,
+                List.of(id("focal_casting")),
+                List.of(Aspect.TENEBRAE, Aspect.MORS, Aspect.SOMNUS),
+                new AspectStack(Aspect.TENEBRAE, 3), new AspectStack(Aspect.MORS, 2));
 
         register("resonant_work", "craft", 0.46f, 0.82f, Research.Method.ASPECTS,
                 List.of(id("wand_attunement"), id("aspect_almanac")),

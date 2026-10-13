@@ -44,6 +44,7 @@ public class AuraScannerItem extends Item {
 
         boolean studied = ArcaneProgress.get(serverPlayer).markNodeStudied(
                 player.getUUID(), level.dimension().location(), context.getClickedPos().asLong(), node.getScanAspects());
+        serverPlayer.sendSystemMessage(node.describe());
         if (studied) {
             serverPlayer.displayClientMessage(Component.translatable("message.fredplenter.node_scanned"), true);
             NetworkHandler.sendProgress(serverPlayer);

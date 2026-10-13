@@ -152,17 +152,6 @@ public final class ArcaneProgress extends SavedData {
         return true;
     }
 
-    public boolean startResearch(ServerPlayer player, ResourceLocation researchId) {
-        Research research = ResearchRegistry.get(researchId);
-        if (research == null || research.method() != Research.Method.PAPER
-                || !canStartResearch(player.getUUID(), research)
-                || !hasItem(player.getInventory(), Items.PAPER)) {
-            return false;
-        }
-        consumeOne(player.getInventory(), Items.PAPER);
-        return true;
-    }
-
     public boolean beginCodexResearch(ServerPlayer player, ResourceLocation researchId) {
         Research research = ResearchRegistry.get(researchId);
         if (research == null || !canStartResearch(player.getUUID(), research)) {

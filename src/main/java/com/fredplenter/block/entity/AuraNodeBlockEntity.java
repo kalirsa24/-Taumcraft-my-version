@@ -7,6 +7,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -47,10 +48,13 @@ public class AuraNodeBlockEntity extends BlockEntity {
         return drained;
     }
 
+    /** One point per aspect the node still holds; drained aspects give nothing. */
     public List<AspectStack> getScanAspects() {
         List<AspectStack> aspects = new ArrayList<>();
         for (Map.Entry<Aspect, Integer> entry : vis.entrySet()) {
-            aspects.add(new AspectStack(entry.getKey(), 1));
+            if (entry.getValue() > 0) {
+                aspects.add(new AspectStack(entry.getKey(), 1));
+            }
         }
         return List.copyOf(aspects);
     }
@@ -59,8 +63,25 @@ public class AuraNodeBlockEntity extends BlockEntity {
         return vis.getOrDefault(aspect, 0);
     }
 
+    /** Human-readable summary of the vis left in this node, e.g. "Flamma 12, Unda 8". */
     public Component describe() {
-        return Component.translatable("message.fredplenter.node_vis", vis.size());
+        MutableComponent summary = Component.empty();
+        boolean first = true;
+        for (Map.Entry<Aspect, Integer> entry : vis.entrySet()) {
+            if (entry.getValue() <= 0) {
+                continue;
+            }
+            if (!first) {
+                summary.append(", ");
+            }
+            summary.append(Component.translatable(entry.getKey().getTranslationKey()))
+                    .append(" " + entry.getValue());
+            first = false;
+        }
+        if (first) {
+            return Component.translatable("message.fredplenter.node_empty");
+        }
+        return Component.translatable("message.fredplenter.node_vis", summary);
     }
 
     private void initializeVis(Level level, BlockPos pos) {

@@ -37,7 +37,7 @@ public final class ModItems {
             "inkwell", InkwellItem::new, new Item.Properties().stacksTo(1));
 
     public static final DeferredItem<ResearchNoteItem> RESEARCH_NOTE = ITEMS.registerItem(
-            "research_note", ResearchNoteItem::new);
+            "research_note", ResearchNoteItem::new, new Item.Properties().stacksTo(1));
 
     private ModItems() {
     }
