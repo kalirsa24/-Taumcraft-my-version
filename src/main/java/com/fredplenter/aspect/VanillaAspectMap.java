@@ -31,7 +31,7 @@ public final class VanillaAspectMap {
     }
 
     private static Aspect primaryAspect(String path) {
-        if (contains(path, "water", "bucket", "ice", "snow", "fish", "kelp", "coral", "sponge")) {
+        if (contains(path, "water", "bucket", "ice", "snow", "fish", "kelp", "coral", "sponge", "slime")) {
             return Aspect.UNDA;
         }
         if (contains(path, "wood", "log", "plank", "sapling", "seed", "crop", "flower", "wheat", "bread", "apple", "meat", "beef", "pork", "chicken", "carrot", "potato", "beetroot", "honey", "egg", "mushroom")) {

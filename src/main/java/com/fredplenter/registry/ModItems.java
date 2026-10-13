@@ -8,6 +8,7 @@ import com.fredplenter.item.AuraScannerItem;
 import com.fredplenter.item.InkwellItem;
 import com.fredplenter.item.ResearchNoteItem;
 import com.fredplenter.item.ScribingToolsItem;
+import com.fredplenter.item.StirringRodItem;
 import net.minecraft.world.item.Item;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -38,6 +39,9 @@ public final class ModItems {
 
     public static final DeferredItem<ResearchNoteItem> RESEARCH_NOTE = ITEMS.registerItem(
             "research_note", ResearchNoteItem::new, new Item.Properties().stacksTo(1));
+
+    public static final DeferredItem<StirringRodItem> STIRRING_ROD = ITEMS.registerItem(
+            "stirring_rod", StirringRodItem::new, new Item.Properties().durability(48));
 
     private ModItems() {
     }

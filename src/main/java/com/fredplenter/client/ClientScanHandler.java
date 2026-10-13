@@ -1,6 +1,8 @@
 package com.fredplenter.client;
 
 import com.fredplenter.Fredplenter;
+import com.fredplenter.aspect.AspectStack;
+import com.fredplenter.aspect.VanillaAspectMap;
 import com.fredplenter.network.ScanItemPayload;
 import com.fredplenter.network.RequestProgressPayload;
 import com.fredplenter.registry.ModItems;
@@ -9,6 +11,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.Slot;
@@ -20,6 +23,7 @@ import net.neoforged.neoforge.client.event.ContainerScreenEvent;
 import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -99,6 +103,7 @@ public final class ClientScanHandler {
         if ("minecraft".equals(itemId.getNamespace())) {
             if (ClientArcaneProgress.hasStudiedItem(itemId)) {
                 event.getToolTip().add(Component.translatable("tooltip.fredplenter.studied").withStyle(ChatFormatting.GREEN));
+                addAspectLine(itemId, event.getToolTip());
             } else if (itemId.equals(hoveredItem) && !scanSent) {
                 long remaining = Math.max(0, 2_000L - (System.currentTimeMillis() - hoverStartedAt));
                 event.getToolTip().add(Component.translatable(
@@ -108,6 +113,22 @@ public final class ClientScanHandler {
         } else if (canScan(player)) {
             event.getToolTip().add(Component.translatable("tooltip.fredplenter.unstudyable").withStyle(ChatFormatting.GRAY));
         }
+    }
+
+    /** Lists the aspects a studied item dissolves into, e.g. "Aspects: Flatus 3, Procella 2". */
+    private static void addAspectLine(ResourceLocation itemId, List<Component> tooltip) {
+        List<AspectStack> aspects = VanillaAspectMap.aspectsFor(itemId);
+        if (aspects.isEmpty()) {
+            return;
+        }
+        MutableComponent line = Component.translatable("tooltip.fredplenter.item_aspects").withStyle(ChatFormatting.GRAY);
+        for (AspectStack stack : aspects) {
+            line.append(Component.literal(" "))
+                    .append(Component.translatable(stack.aspect().getTranslationKey())
+                            .withStyle(style -> style.withColor(stack.aspect().getColor())))
+                    .append(Component.literal(" " + stack.amount()).withStyle(ChatFormatting.GRAY));
+        }
+        tooltip.add(line);
     }
 
     private static void resetHover() {

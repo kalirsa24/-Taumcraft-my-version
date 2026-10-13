@@ -27,8 +27,10 @@ public final class ModCreativeTab {
                         output.accept(ModItems.SCRIBING_TOOLS.get());
                         output.accept(ModItems.INKWELL.get());
                         output.accept(ModItems.ASPECT_CACHE.get());
+                        output.accept(ModItems.STIRRING_ROD.get());
                         output.accept(ModBlocks.ARCANE_TABLE_ITEM.get());
                         output.accept(ModBlocks.AURA_NODE_ITEM.get());
+                        output.accept(ModBlocks.CRUCIBLE_ITEM.get());
                     })
                     .build());
 

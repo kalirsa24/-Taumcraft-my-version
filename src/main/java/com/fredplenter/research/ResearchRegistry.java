@@ -89,6 +89,16 @@ public final class ResearchRegistry {
                 List.of(id("ink_and_paper"), id("resonant_work")),
                 List.of(Aspect.FLAMMA, Aspect.CINIS, Aspect.HUMUS),
                 new AspectStack(Aspect.CINIS, 5), new AspectStack(Aspect.MOTUS, 5));
+        register("crucible_alchemy", "craft", 0.14f, 0.92f, Research.Method.ASPECTS,
+                List.of(id("ink_and_paper")),
+                List.of(Aspect.HUMUS, Aspect.FLAMMA, Aspect.UNDA),
+                new AspectStack(Aspect.HUMUS, 2), new AspectStack(Aspect.FLAMMA, 2),
+                new AspectStack(Aspect.UNDA, 2));
+        register("transmutation", "craft", 0.46f, 0.66f, Research.Method.ASPECTS,
+                List.of(id("crucible_alchemy")),
+                List.of(Aspect.LIMUS, Aspect.MORS, Aspect.VITA),
+                new AspectStack(Aspect.LIMUS, 3), new AspectStack(Aspect.MORS, 2),
+                new AspectStack(Aspect.VITA, 2));
     }
 
     public static Map<ResourceLocation, Research> all() {

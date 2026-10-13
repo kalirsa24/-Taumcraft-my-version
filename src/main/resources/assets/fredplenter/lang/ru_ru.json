@@ -193,5 +193,22 @@
   "message.fredplenter.block_unstudyable": "Этот блок нельзя изучить",
   "message.fredplenter.node_dominant": "Преобладающий аспект: %s",
   "gui.fredplenter.unlocks_spell": "Открывает заклинание: %s",
-  "message.fredplenter.aspect_discovered": "Открыт новый аспект: %s"
+  "message.fredplenter.aspect_discovered": "Открыт новый аспект: %s",
+  "block.fredplenter.crucible": "Алхимический тигель",
+  "item.fredplenter.stirring_rod": "Мешальный стержень",
+  "tooltip.fredplenter.stirring_rod_help": "ПКМ по нагретому тиглю — сварить смесь. Каждое размешивание изнашивает стержень.",
+  "tooltip.fredplenter.item_aspects": "Аспекты:",
+  "message.fredplenter.crucible_empty": "Тигель пуст.",
+  "message.fredplenter.crucible_contents": "В тигле: %s",
+  "message.fredplenter.crucible_locked": "Тигель пока ничего не значит для вас. Сначала изучите «Алхимический тигель».",
+  "message.fredplenter.crucible_needs_heat": "Нагрейте тигель снизу: огнём, огнём душ, магмой или лавой.",
+  "message.fredplenter.crucible_no_aspects": "Этот предмет не растворяется в аспекты.",
+  "message.fredplenter.crucible_dissolved": "Растворено: %s",
+  "message.fredplenter.crucible_recipe_locked": "Смесь подходит к рецепту, который вы ещё не изучили.",
+  "message.fredplenter.crucible_unstable": "Смесь нестабильна и ничего не даёт.",
+  "message.fredplenter.crucible_brewed": "Сварено: %s",
+  "research.fredplenter.crucible_alchemy.title": "Алхимический тигель",
+  "research.fredplenter.crucible_alchemy.desc": "Растворяйте обычные вещи в аспекты в нагретом тигле.",
+  "research.fredplenter.transmutation.title": "Трансмутация",
+  "research.fredplenter.transmutation.desc": "Варите новые материалы из смесей аспектов."
 }

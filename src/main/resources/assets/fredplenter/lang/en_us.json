@@ -193,5 +193,22 @@
   "message.fredplenter.block_unstudyable": "This block cannot be studied",
   "message.fredplenter.node_dominant": "Dominant aspect: %s",
   "gui.fredplenter.unlocks_spell": "Unlocks spell: %s",
-  "message.fredplenter.aspect_discovered": "New aspect discovered: %s"
+  "message.fredplenter.aspect_discovered": "New aspect discovered: %s",
+  "block.fredplenter.crucible": "Alchemical Crucible",
+  "item.fredplenter.stirring_rod": "Stirring Rod",
+  "tooltip.fredplenter.stirring_rod_help": "Right-click a heated crucible to brew. Every stir wears the rod.",
+  "tooltip.fredplenter.item_aspects": "Aspects:",
+  "message.fredplenter.crucible_empty": "The crucible is empty.",
+  "message.fredplenter.crucible_contents": "In the crucible: %s",
+  "message.fredplenter.crucible_locked": "The crucible means nothing to you yet. Learn Alchemical Crucible first.",
+  "message.fredplenter.crucible_needs_heat": "Heat the crucible from below with fire, soul fire, magma or lava.",
+  "message.fredplenter.crucible_no_aspects": "This item does not dissolve into aspects.",
+  "message.fredplenter.crucible_dissolved": "Dissolved: %s",
+  "message.fredplenter.crucible_recipe_locked": "The mixture matches a recipe you have not learned yet.",
+  "message.fredplenter.crucible_unstable": "The mixture is unstable and yields nothing.",
+  "message.fredplenter.crucible_brewed": "Brewed: %s",
+  "research.fredplenter.crucible_alchemy.title": "Alchemical Crucible",
+  "research.fredplenter.crucible_alchemy.desc": "Dissolve ordinary things into aspects in a heated crucible.",
+  "research.fredplenter.transmutation.title": "Transmutation",
+  "research.fredplenter.transmutation.desc": "Brew new materials from mixtures of aspects."
 }

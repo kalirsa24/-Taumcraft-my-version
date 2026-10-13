@@ -4,6 +4,7 @@ import com.fredplenter.Fredplenter;
 import com.fredplenter.block.AuraNodeBlock;
 import com.fredplenter.block.ArcaneTableBlock;
 import com.fredplenter.block.ArcaneTableExtensionBlock;
+import com.fredplenter.block.CrucibleBlock;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
@@ -45,8 +46,17 @@ public final class ModBlocks {
                     .lightLevel(state -> 8)
                     .noOcclusion()));
 
+    public static final DeferredBlock<CrucibleBlock> CRUCIBLE = BLOCKS.register(
+            "crucible",
+            () -> new CrucibleBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.METAL)
+                    .strength(2.0f)
+                    .sound(SoundType.METAL)
+                    .noOcclusion()));
+
     public static final DeferredItem<BlockItem> ARCANE_TABLE_ITEM = BLOCK_ITEMS.registerSimpleBlockItem(ARCANE_TABLE);
     public static final DeferredItem<BlockItem> AURA_NODE_ITEM = BLOCK_ITEMS.registerSimpleBlockItem(AURA_NODE);
+    public static final DeferredItem<BlockItem> CRUCIBLE_ITEM = BLOCK_ITEMS.registerSimpleBlockItem(CRUCIBLE);
 
     private ModBlocks() {
     }
