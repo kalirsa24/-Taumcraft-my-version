@@ -6,6 +6,7 @@ import com.fredplenter.registry.ModItems;
 import com.fredplenter.item.InkwellItem;
 import com.fredplenter.item.ResearchNoteItem;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.network.chat.Component;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
@@ -101,6 +102,20 @@ public final class ArcaneProgress extends SavedData {
         state.discoveredAspects.add(aspect);
         ensurePrimals(state);
         setDirty();
+    }
+
+    /**
+     * Tells the player about aspects that became discovered since {@code before}
+     * was taken. Call {@code getDiscovered} first, perform the scan, then call this.
+     */
+    public static void announceNewAspects(ServerPlayer player, Set<Aspect> before) {
+        Set<Aspect> after = get(player).getDiscovered(player.getUUID());
+        for (Aspect aspect : Aspect.values()) {
+            if (after.contains(aspect) && !before.contains(aspect)) {
+                player.displayClientMessage(Component.translatable("message.fredplenter.aspect_discovered",
+                        Component.translatable(aspect.getTranslationKey())), false);
+            }
+        }
     }
 
     public boolean hasDiscovered(UUID playerId, Aspect aspect) {

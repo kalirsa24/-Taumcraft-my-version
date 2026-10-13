@@ -1,6 +1,7 @@
 package com.fredplenter.network;
 
 import com.fredplenter.Fredplenter;
+import com.fredplenter.aspect.Aspect;
 import com.fredplenter.aspect.VanillaAspectMap;
 import com.fredplenter.item.ModItemCheck;
 import com.fredplenter.registry.ModItems;
@@ -12,6 +13,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
+
+import java.util.Set;
 
 public record ScanItemPayload(ResourceLocation itemId) implements CustomPacketPayload {
 
@@ -35,10 +38,13 @@ public record ScanItemPayload(ResourceLocation itemId) implements CustomPacketPa
                 return;
             }
 
-            if (!ArcaneProgress.get(player).markItemStudied(
+            ArcaneProgress progress = ArcaneProgress.get(player);
+            Set<Aspect> before = progress.getDiscovered(player.getUUID());
+            if (!progress.markItemStudied(
                     player.getUUID(), payload.itemId(), VanillaAspectMap.aspectsFor(payload.itemId()))) {
                 return;
             }
+            ArcaneProgress.announceNewAspects(player, before);
             player.displayClientMessage(
                     net.minecraft.network.chat.Component.translatable("message.fredplenter.item_scanned"), true);
             NetworkHandler.sendProgress(player);

@@ -12,6 +12,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -61,6 +62,20 @@ public class AuraNodeBlockEntity extends BlockEntity {
 
     public int getVis(Aspect aspect) {
         return vis.getOrDefault(aspect, 0);
+    }
+
+    /** The aspect this node holds the most vis of, or {@code null} once it is empty. */
+    @Nullable
+    public Aspect dominantAspect() {
+        Aspect best = null;
+        int bestAmount = 0;
+        for (Map.Entry<Aspect, Integer> entry : vis.entrySet()) {
+            if (entry.getValue() > bestAmount) {
+                best = entry.getKey();
+                bestAmount = entry.getValue();
+            }
+        }
+        return best;
     }
 
     /** Human-readable summary of the vis left in this node, e.g. "Flamma 12, Unda 8". */

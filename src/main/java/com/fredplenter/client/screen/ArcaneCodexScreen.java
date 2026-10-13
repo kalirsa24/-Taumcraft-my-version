@@ -7,6 +7,7 @@ import com.fredplenter.research.Research;
 import com.fredplenter.research.ResearchRegistry;
 import com.fredplenter.item.InkwellItem;
 import com.fredplenter.registry.ModItems;
+import com.fredplenter.spell.Spell;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -202,6 +203,12 @@ public class ArcaneCodexScreen extends Screen {
             for (com.fredplenter.aspect.AspectStack cost : entry.cost()) {
                 lines.add(Component.translatable("gui.fredplenter.aspect_cost_entry",
                         Component.translatable(cost.aspect().getTranslationKey()), cost.amount()));
+            }
+        }
+        for (Spell spell : Spell.values()) {
+            if (spell.getResearch().equals(entry.id())) {
+                lines.add(Component.translatable("gui.fredplenter.unlocks_spell",
+                        Component.translatable(spell.getTranslationKey())).withStyle(style -> style.withColor(0xFFB8E6FF)));
             }
         }
         lines.add(Component.translatable("gui.fredplenter.prerequisites"));

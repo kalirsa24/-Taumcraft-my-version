@@ -14,6 +14,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.Slot;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
@@ -385,6 +386,16 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
         drawInsetPanel(graphics, x, y, width, height, 0xFF503823, 0xFF34271D);
         graphics.drawCenteredString(font, Component.translatable("container.inventory"),
                 leftPos + imageWidth / 2, topPos + 172, 0xFFD9C39A);
+        // Slot 0 is the research note slot, which already has its own frame in the sidebar.
+        for (int index = 1; index < menu.slots.size(); index++) {
+            Slot slot = menu.slots.get(index);
+            drawSlotFrame(graphics, leftPos + slot.x - 1, topPos + slot.y - 1);
+        }
+    }
+
+    private static void drawSlotFrame(GuiGraphics graphics, int x, int y) {
+        graphics.fill(x, y, x + 18, y + 18, 0xFF8B6B46);
+        graphics.fill(x + 1, y + 1, x + 17, y + 17, 0xFF2A1D14);
     }
 
     private void drawInsetPanel(GuiGraphics graphics, int x, int y, int width, int height,

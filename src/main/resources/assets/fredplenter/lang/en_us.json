@@ -187,5 +187,11 @@
   "research.fredplenter.verdant_weaving.title": "Verdant Weaving",
   "research.fredplenter.verdant_weaving.desc": "Teach the wand the Verdure spell.",
   "research.fredplenter.dread_weaving.title": "Dread Weaving",
-  "research.fredplenter.dread_weaving.desc": "Teach the wand the Dread spell."
+  "research.fredplenter.dread_weaving.desc": "Teach the wand the Dread spell.",
+
+  "tooltip.fredplenter.scanner_block_help": "Shift + right-click a block to study its aspects.",
+  "message.fredplenter.block_unstudyable": "This block cannot be studied",
+  "message.fredplenter.node_dominant": "Dominant aspect: %s",
+  "gui.fredplenter.unlocks_spell": "Unlocks spell: %s",
+  "message.fredplenter.aspect_discovered": "New aspect discovered: %s"
 }

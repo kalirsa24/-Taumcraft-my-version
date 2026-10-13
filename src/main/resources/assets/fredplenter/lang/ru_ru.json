@@ -187,5 +187,11 @@
   "research.fredplenter.verdant_weaving.title": "Плетение зелени",
   "research.fredplenter.verdant_weaving.desc": "Научите посох заклинанию Цветение.",
   "research.fredplenter.dread_weaving.title": "Плетение мрака",
-  "research.fredplenter.dread_weaving.desc": "Научите посох заклинанию Страх."
+  "research.fredplenter.dread_weaving.desc": "Научите посох заклинанию Страх.",
+
+  "tooltip.fredplenter.scanner_block_help": "Shift + ПКМ по блоку — изучить его аспекты.",
+  "message.fredplenter.block_unstudyable": "Этот блок нельзя изучить",
+  "message.fredplenter.node_dominant": "Преобладающий аспект: %s",
+  "gui.fredplenter.unlocks_spell": "Открывает заклинание: %s",
+  "message.fredplenter.aspect_discovered": "Открыт новый аспект: %s"
 }
