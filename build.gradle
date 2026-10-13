@@ -67,6 +67,12 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 dependencies {
     // Add additional NeoForge/mod dependencies here, e.g.:
     // implementation "some.other:mod:${some_version}"
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
 }
 
 tasks.withType(JavaCompile).configureEach {

@@ -22,8 +22,9 @@ public record RequestProgressPayload() implements CustomPacketPayload {
 
     public static void handle(RequestProgressPayload payload, IPayloadContext context) {
         context.enqueueWork(() -> {
-            if (context.player() instanceof ServerPlayer player) {
-                NetworkHandler.sendProgress(player);
+            if (context.player() instanceof ServerPlayer player
+                    && ServerPacketRateLimiter.tryAcquire(player, ServerPacketRateLimiter.Action.REQUEST_PROGRESS) == 0) {
+                NetworkHandler.sendFullProgress(player);
             }
         });
     }

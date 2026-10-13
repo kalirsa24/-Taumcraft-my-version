@@ -6,6 +6,7 @@ import com.fredplenter.registry.ModBlockEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -69,9 +70,12 @@ public class AuraNodeBlockEntity extends BlockEntity {
         Aspect[] aspects = java.util.Arrays.stream(Aspect.values())
                 .filter(Aspect::isPrimal)
                 .toArray(Aspect[]::new);
-        int count = 3 + random.nextInt(3);
+        int count = Math.min(3 + random.nextInt(3), aspects.length);
         for (int i = 0; i < count; i++) {
-            Aspect aspect = aspects[random.nextInt(aspects.length)];
+            int selected = i + random.nextInt(aspects.length - i);
+            Aspect aspect = aspects[selected];
+            aspects[selected] = aspects[i];
+            aspects[i] = aspect;
             vis.put(aspect, 8 + random.nextInt(9));
         }
         setChanged();
@@ -107,9 +111,9 @@ public class AuraNodeBlockEntity extends BlockEntity {
         vis.clear();
         CompoundTag storedVis = tag.getCompound("Vis");
         for (Aspect aspect : Aspect.values()) {
-            int amount = storedVis.getInt(aspect.getId());
-            if (amount > 0) {
-                vis.put(aspect, Math.min(MAX_VIS, amount));
+            String id = aspect.getId();
+            if (storedVis.contains(id, Tag.TAG_INT)) {
+                vis.put(aspect, Math.max(0, Math.min(MAX_VIS, storedVis.getInt(id))));
             }
         }
         initialized = tag.getBoolean("Initialized");

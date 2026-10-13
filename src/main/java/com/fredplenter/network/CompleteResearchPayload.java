@@ -23,7 +23,7 @@ public record CompleteResearchPayload(ResourceLocation researchId, String soluti
     public static final StreamCodec<RegistryFriendlyByteBuf, CompleteResearchPayload> STREAM_CODEC =
             StreamCodec.composite(
                     ResourceLocation.STREAM_CODEC, CompleteResearchPayload::researchId,
-                    ByteBufCodecs.STRING_UTF8, CompleteResearchPayload::solution,
+                    ByteBufCodecs.stringUtf8(512), CompleteResearchPayload::solution,
                     CompleteResearchPayload::new);
 
     @Override
@@ -33,7 +33,11 @@ public record CompleteResearchPayload(ResourceLocation researchId, String soluti
 
     public static void handle(CompleteResearchPayload payload, IPayloadContext context) {
         context.enqueueWork(() -> {
-            if (!(context.player() instanceof ServerPlayer player)
+            if (!(context.player() instanceof ServerPlayer player)) {
+                return;
+            }
+            if (ServerPacketRateLimiter.tryAcquire(
+                    player, ServerPacketRateLimiter.Action.COMPLETE_RESEARCH) > 0
                     || !(player.containerMenu instanceof ArcaneTableMenu menu)) {
                 return;
             }

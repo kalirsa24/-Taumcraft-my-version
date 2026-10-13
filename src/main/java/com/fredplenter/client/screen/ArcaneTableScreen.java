@@ -1,12 +1,14 @@
 package com.fredplenter.client.screen;
 
 import com.fredplenter.aspect.Aspect;
-import com.fredplenter.network.CombineAspectsPayload;
+import com.fredplenter.aspect.AspectRecipe;
 import com.fredplenter.menu.ArcaneTableMenu;
 import com.fredplenter.network.CompleteResearchPayload;
+import com.fredplenter.network.CreateAspectPayload;
 import com.fredplenter.network.StartResearchPayload;
 import com.fredplenter.research.ClientArcaneProgress;
 import com.fredplenter.research.HexPosition;
+import com.fredplenter.research.ArcaneProgress;
 import com.fredplenter.research.Research;
 import com.fredplenter.research.ResearchRegistry;
 import net.minecraft.client.gui.GuiGraphics;
@@ -24,7 +26,10 @@ import java.util.Map;
 public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> {
 
     private static final int WIDTH = 360;
-    private static final int HEIGHT = 320;
+    private static final int RECIPE_PANEL_TOP = 170;
+    private static final int RECIPE_PANEL_HEIGHT = 72;
+    private static final int INVENTORY_TOP = RECIPE_PANEL_TOP + RECIPE_PANEL_HEIGHT + 18;
+    private static final int HEIGHT = 410;
     private static final int SIDEBAR_WIDTH = 90;
     private static final int HEX_SIZE = 8;
     private static final int HEX_SPACING = 20;
@@ -37,10 +42,10 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
     private Research selectedResearch;
     private Research activeResearch;
     private Aspect placementAspect;
-    private Aspect combineFirst;
-    private Aspect combineSecond;
+    private Aspect selectedCraftAspect;
     private boolean awaitingPuzzleResult;
     private boolean awaitingResearchStart;
+    private boolean awaitingAspectCreation;
     private String puzzleFeedback = "";
     private int displayedRevision = -1;
 
@@ -69,6 +74,9 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
             displayedRevision = revision;
             if (awaitingPuzzleResult) {
                 awaitingPuzzleResult = false;
+            }
+            if (awaitingAspectCreation) {
+                awaitingAspectCreation = false;
             }
             if (awaitingResearchStart
                     && activeResearch != null
@@ -101,6 +109,7 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
             rebuildButtons();
         }
         super.render(graphics, mouseX, mouseY, partialTick);
+        renderRecipeTooltip(graphics, mouseX, mouseY);
         renderAspectTooltip(graphics, mouseX, mouseY);
     }
 
@@ -111,6 +120,11 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
         } else {
             buildPuzzleButtons();
         }
+        addRenderableWidget(Button.builder(Component.translatable("gui.fredplenter.faq"),
+                        ignored -> minecraft.setScreen(new ArcaneTableFaqScreen(this)))
+                .pos(leftPos + imageWidth - 49, topPos + 10)
+                .size(40, 16)
+                .build());
     }
 
     private void buildResearchButtons() {
@@ -124,16 +138,13 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
             button.active = menu.canStartResearch(selectedResearch);
             addRenderableWidget(button);
         }
-        Button combine = Button.builder(Component.translatable("gui.fredplenter.combine_aspects"),
-                        ignored -> combineSelectedAspects())
+        Button create = Button.builder(Component.translatable("gui.fredplenter.create_aspect"),
+                        ignored -> createSelectedAspect(hasShiftDown()))
                 .pos(leftPos + imageWidth - 91, topPos + 145)
                 .size(82, 17)
                 .build();
-        combine.active = combineFirst != null && combineSecond != null
-                && Aspect.combine(combineFirst, combineSecond) != null
-                && menu.getAspectPoints(combineFirst) > 0
-                && menu.getAspectPoints(combineSecond) > 0;
-        addRenderableWidget(combine);
+        create.active = selectedCraftAspect != null && canCreate(selectedCraftAspect) && !awaitingAspectCreation;
+        addRenderableWidget(create);
     }
 
     private void buildPuzzleButtons() {
@@ -270,31 +281,26 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
         return String.join(";", encoded);
     }
 
-    private void combineSelectedAspects() {
-        if (combineFirst == null || combineSecond == null
-                || Aspect.combine(combineFirst, combineSecond) == null) {
+    private void createSelectedAspect(boolean createMaximum) {
+        if (selectedCraftAspect == null || !canCreate(selectedCraftAspect) || awaitingAspectCreation) {
             return;
         }
-        PacketDistributor.sendToServer(new CombineAspectsPayload(combineFirst.getId(), combineSecond.getId()));
-        combineFirst = null;
-        combineSecond = null;
+        PacketDistributor.sendToServer(new CreateAspectPayload(selectedCraftAspect.getId(), createMaximum));
+        awaitingAspectCreation = true;
         rebuildButtons();
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button == 0 && activeResearch == null) {
-            Aspect clickedAspect = findSidebarAspect(mouseX, mouseY);
-            if (clickedAspect != null && ClientArcaneProgress.hasDiscovered(clickedAspect)) {
-                if (combineFirst == null || combineFirst == clickedAspect) {
-                    combineFirst = clickedAspect;
-                } else if (combineSecond == null || combineSecond == clickedAspect) {
-                    combineSecond = clickedAspect;
+            AspectRecipe clickedRecipe = findRecipeAt(mouseX, mouseY);
+            if (clickedRecipe != null) {
+                selectedCraftAspect = clickedRecipe.result();
+                if (hasShiftDown() && canCreate(selectedCraftAspect)) {
+                    createSelectedAspect(true);
                 } else {
-                    combineFirst = clickedAspect;
-                    combineSecond = null;
+                    rebuildButtons();
                 }
-                rebuildButtons();
                 return true;
             }
         } else if (button == 0 && activeResearch != null) {
@@ -329,7 +335,7 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
         drawWorkspace(graphics);
         drawInventoryArea(graphics);
         drawAspectSidebar(graphics);
-        drawTableHelp(graphics);
+        drawAspectRecipePanel(graphics, mouseX, mouseY);
         if (activeResearch != null) {
             renderResearchPuzzle(graphics, mouseX, mouseY);
             renderPuzzleDetails(graphics);
@@ -338,7 +344,7 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
             renderAvailableResearch(graphics);
         } else {
             graphics.drawCenteredString(font, Component.translatable("gui.fredplenter.table_insert_note"),
-                    leftPos + SIDEBAR_WIDTH + 7 + workspaceWidth() / 2, topPos + 82, 0xFF41301C);
+                    leftPos + SIDEBAR_WIDTH + 7 + workspaceWidth() / 2, topPos + 112, 0xFF41301C);
             renderCombinerHint(graphics);
         }
     }
@@ -379,12 +385,12 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
 
     private void drawInventoryArea(GuiGraphics graphics) {
         int x = leftPos + 8;
-        int y = topPos + 170;
+        int y = topPos + INVENTORY_TOP;
         int width = imageWidth - 16;
-        int height = imageHeight - 179;
+        int height = imageHeight - INVENTORY_TOP - 9;
         drawInsetPanel(graphics, x, y, width, height, 0xFF503823, 0xFF34271D);
         graphics.drawCenteredString(font, Component.translatable("container.inventory"),
-                leftPos + imageWidth / 2, topPos + 172, 0xFFD9C39A);
+                leftPos + imageWidth / 2, topPos + INVENTORY_TOP + 2, 0xFFD9C39A);
     }
 
     private void drawInsetPanel(GuiGraphics graphics, int x, int y, int width, int height,
@@ -401,7 +407,7 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
             int aspectX = leftPos + 11 + index % 2 * 41;
             int aspectY = topPos + 31 + index / 2 * 12;
             boolean known = ClientArcaneProgress.hasDiscovered(aspect);
-            boolean selected = aspect == combineFirst || aspect == combineSecond || aspect == placementAspect;
+            boolean selected = aspect == selectedCraftAspect || aspect == placementAspect;
             if (selected) {
                 graphics.fill(aspectX - 3, aspectY - 2, aspectX + 38, aspectY + 12, 0xFFFFD77A);
             }
@@ -420,37 +426,134 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
         graphics.fill(slotX, slotY, slotX + 18, slotY + 18, 0xFF34271D);
     }
 
-    private void drawTableHelp(GuiGraphics graphics) {
-        int x = leftPos + 180;
-        int y = topPos + 184;
-        int width = imageWidth - 190;
-        int height = imageHeight - 194;
-        drawInsetPanel(graphics, x, y, width, height, 0xFF503823, 0xFF34271D);
+    private void drawAspectRecipePanel(GuiGraphics graphics, int mouseX, int mouseY) {
+        int panelX = leftPos + 13;
+        int panelY = topPos + RECIPE_PANEL_TOP;
+        int panelWidth = imageWidth - 16;
+        drawInsetPanel(graphics, panelX, panelY, panelWidth, RECIPE_PANEL_HEIGHT,
+                0xFF503823, 0xFF34271D);
+        graphics.drawString(font, Component.translatable("gui.fredplenter.recipe_panel"),
+                panelX + 6, panelY + 4, 0xFFE6C995, false);
 
-        int textX = x + 7;
-        int textY = y + 7;
-        int textWidth = width - 14;
-        graphics.drawString(font, Component.translatable("gui.fredplenter.table_help_title"),
-                textX, textY, 0xFFE6C995, false);
-        textY += 14;
-        textY = drawHelpSection(graphics, "gui.fredplenter.table_help_purpose",
-                "gui.fredplenter.table_help_purpose_desc", textX, textY, textWidth);
-        textY = drawHelpSection(graphics, "gui.fredplenter.table_help_get",
-                "gui.fredplenter.table_help_get_desc", textX, textY + 3, textWidth);
-        drawHelpSection(graphics, "gui.fredplenter.table_help_solve",
-                "gui.fredplenter.table_help_solve_desc", textX, textY + 3, textWidth);
+        List<AspectRecipe> recipes = AspectRecipe.all();
+        int columns = 5;
+        int cellWidth = (panelWidth - 10) / columns;
+        int cellHeight = 27;
+        int gridX = panelX + 5;
+        int gridY = panelY + 14;
+        for (int index = 0; index < recipes.size(); index++) {
+            AspectRecipe recipe = recipes.get(index);
+            int cellX = gridX + index % columns * cellWidth;
+            int cellY = gridY + index / columns * (cellHeight + 1);
+            boolean selected = recipe.result() == selectedCraftAspect;
+            boolean available = canCreate(recipe.result());
+            boolean hovered = mouseX >= cellX && mouseX < cellX + cellWidth
+                    && mouseY >= cellY && mouseY < cellY + cellHeight;
+            int frameColor = selected ? 0xFFFFD77A
+                    : hovered ? 0xFFE6C995
+                    : available ? 0xFF76A84B : 0xFF60402A;
+            graphics.fill(cellX, cellY, cellX + cellWidth - 1, cellY + cellHeight, 0xFF24170F);
+            graphics.fill(cellX + 1, cellY + 1, cellX + cellWidth - 2,
+                    cellY + cellHeight - 1, frameColor);
+            graphics.fill(cellX + 2, cellY + 2, cellX + cellWidth - 3,
+                    cellY + cellHeight - 2, available ? 0xFF493A25 : 0xFF30261C);
+
+            int iconY = cellY + 10;
+            drawSmallAspectIcon(graphics, cellX + 9, iconY, recipe.first(),
+                    ClientArcaneProgress.hasDiscovered(recipe.first())
+                            && menu.getAspectPoints(recipe.first()) > 0);
+            drawSmallAspectIcon(graphics, cellX + 25, iconY, recipe.second(),
+                    ClientArcaneProgress.hasDiscovered(recipe.second())
+                            && menu.getAspectPoints(recipe.second()) > 0);
+            graphics.drawCenteredString(font, ">", cellX + 40, iconY - 3, 0xFFE6C995);
+            drawSmallAspectIcon(graphics, cellX + cellWidth - 9, iconY, recipe.result(),
+                    ClientArcaneProgress.hasDiscovered(recipe.result()) || available);
+            graphics.drawCenteredString(font, recipePointLabel(recipe.first()),
+                    cellX + 9, cellY + 15, 0xFFE6C995);
+            graphics.drawCenteredString(font, recipePointLabel(recipe.second()),
+                    cellX + 25, cellY + 15, 0xFFE6C995);
+            graphics.drawCenteredString(font, recipeResultPointLabel(recipe.result()),
+                    cellX + cellWidth - 9, cellY + 15, 0xFFE6C995);
+        }
     }
 
-    private int drawHelpSection(GuiGraphics graphics, String titleKey, String descriptionKey,
-                                int x, int y, int width) {
-        graphics.drawString(font, Component.translatable(titleKey), x, y, 0xFFE6C995, false);
-        y += 10;
-        for (net.minecraft.util.FormattedCharSequence line
-                : font.split(Component.translatable(descriptionKey), width)) {
-            graphics.drawString(font, line, x, y, 0xFFD9C39A, false);
-            y += 9;
+    private void drawSmallAspectIcon(GuiGraphics graphics, int centerX, int centerY,
+                                     Aspect aspect, boolean bright) {
+        int color = bright ? aspect.getColor() : shade(aspect.getColor(), 0.35f);
+        drawHex(graphics, centerX, centerY, 6, 0xFF000000 | color);
+        graphics.drawCenteredString(font, aspectMark(aspect), centerX, centerY - 4, 0xFFF7EBD4);
+    }
+
+    private AspectRecipe findRecipeAt(double mouseX, double mouseY) {
+        int panelX = leftPos + 18;
+        int panelY = topPos + RECIPE_PANEL_TOP + 14;
+        int cellWidth = (imageWidth - 26) / 5;
+        int cellHeight = 27;
+        List<AspectRecipe> recipes = AspectRecipe.all();
+        for (int index = 0; index < recipes.size(); index++) {
+            int cellX = panelX + index % 5 * cellWidth;
+            int cellY = panelY + index / 5 * (cellHeight + 1);
+            if (mouseX >= cellX && mouseX < cellX + cellWidth - 1
+                    && mouseY >= cellY && mouseY < cellY + cellHeight) {
+                return recipes.get(index);
+            }
         }
-        return y;
+        return null;
+    }
+
+    private boolean canCreate(Aspect result) {
+        AspectRecipe recipe = AspectRecipe.forResult(result);
+        return recipe != null
+                && ClientArcaneProgress.hasDiscovered(recipe.first())
+                && ClientArcaneProgress.hasDiscovered(recipe.second())
+                && menu.getAspectPoints(recipe.first()) > 0
+                && menu.getAspectPoints(recipe.second()) > 0
+                && menu.getAspectPoints(result) < ArcaneProgress.MAX_ASPECT_POINTS;
+    }
+
+    private String recipePointLabel(Aspect aspect) {
+        return ClientArcaneProgress.hasDiscovered(aspect)
+                ? Integer.toString(menu.getAspectPoints(aspect)) : "?";
+    }
+
+    private String recipeResultPointLabel(Aspect aspect) {
+        return ClientArcaneProgress.hasDiscovered(aspect)
+                ? Integer.toString(menu.getAspectPoints(aspect)) : "0";
+    }
+
+    private void renderRecipeTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
+        AspectRecipe recipe = findRecipeAt(mouseX, mouseY);
+        if (recipe == null) {
+            return;
+        }
+        List<Component> tooltip = new ArrayList<>();
+        tooltip.add(Component.translatable(recipe.result().getTranslationKey()));
+        tooltip.add(Component.translatable("gui.fredplenter.recipe_formula",
+                Component.translatable(recipe.first().getTranslationKey()),
+                Component.translatable(recipe.second().getTranslationKey()),
+                Component.translatable(recipe.result().getTranslationKey())));
+        tooltip.add(Component.translatable("gui.fredplenter.recipe_point_totals",
+                menu.getAspectPoints(recipe.first()), menu.getAspectPoints(recipe.second()),
+                menu.getAspectPoints(recipe.result())));
+        if (!ClientArcaneProgress.hasDiscovered(recipe.first())) {
+            tooltip.add(Component.translatable("gui.fredplenter.recipe_component_locked",
+                    Component.translatable(recipe.first().getTranslationKey())));
+        } else if (menu.getAspectPoints(recipe.first()) < 1) {
+            tooltip.add(Component.translatable("gui.fredplenter.recipe_component_missing",
+                    Component.translatable(recipe.first().getTranslationKey())));
+        }
+        if (!ClientArcaneProgress.hasDiscovered(recipe.second())) {
+            tooltip.add(Component.translatable("gui.fredplenter.recipe_component_locked",
+                    Component.translatable(recipe.second().getTranslationKey())));
+        } else if (menu.getAspectPoints(recipe.second()) < 1) {
+            tooltip.add(Component.translatable("gui.fredplenter.recipe_component_missing",
+                    Component.translatable(recipe.second().getTranslationKey())));
+        }
+        if (canCreate(recipe.result())) {
+            tooltip.add(Component.translatable("gui.fredplenter.recipe_shift_hint"));
+        }
+        graphics.renderTooltip(font, tooltip.stream().map(Component::getVisualOrderText).toList(),
+                mouseX, mouseY);
     }
 
     private void renderAvailableResearch(GuiGraphics graphics) {
@@ -526,18 +629,12 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
         int x = leftPos + SIDEBAR_WIDTH + 8;
         int width = imageWidth - SIDEBAR_WIDTH - 16;
         int y = topPos + 126;
-        String path = activeResearch.puzzle().stream()
-                .map(aspect -> Component.translatable(aspect.getTranslationKey()).getString())
-                .collect(java.util.stream.Collectors.joining(" → "));
-        graphics.drawWordWrap(font,
-                Component.translatable("gui.fredplenter.research_path").append(": " + path),
-                x, y, width, 0xFF41301C);
-        String feedback = puzzleFeedback.isEmpty() ? "gui.fredplenter.place_aspect_first" : puzzleFeedback;
-        if (placementAspect != null) {
-            feedback += " [" + Component.translatable(placementAspect.getTranslationKey()).getString() + "]";
-        }
-        graphics.drawWordWrap(font,
-                Component.translatable(feedback), x, y + 13, width, 0xFF41301C);
+        Component path = Component.translatable("gui.fredplenter.puzzle_required_aspect",
+                Component.translatable(activeResearch.puzzle().get(1).getTranslationKey()));
+        graphics.drawString(font, font.split(path, width).getFirst(), x, y, 0xFF41301C, false);
+        Component feedback = Component.translatable(
+                puzzleFeedback.isEmpty() ? "gui.fredplenter.place_aspect_first" : puzzleFeedback);
+        graphics.drawString(font, font.split(feedback, width).getFirst(), x, y + 11, 0xFF5A4028, false);
     }
 
     private void renderResearchPuzzle(GuiGraphics graphics, int mouseX, int mouseY) {
@@ -737,33 +834,24 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
     }
 
     private void renderCombinerHint(GuiGraphics graphics) {
-        int centerX = leftPos + SIDEBAR_WIDTH + 7 + workspaceWidth() / 2;
-        graphics.drawCenteredString(font, Component.translatable("gui.fredplenter.combine_hint_1"),
-                centerX, topPos + 27, 0xFF41301C);
-        graphics.drawCenteredString(font, Component.translatable("gui.fredplenter.combine_hint_2"),
-                centerX, topPos + 40, 0xFF5A4028);
-        String first = combineFirst == null ? "?"
-                : Component.translatable(combineFirst.getTranslationKey()).getString();
-        String second = combineSecond == null ? "?"
-                : Component.translatable(combineSecond.getTranslationKey()).getString();
-        Aspect result = Aspect.combine(combineFirst, combineSecond);
-        String resultName = result == null ? "?"
-                : Component.translatable(result.getTranslationKey()).getString();
-        graphics.drawCenteredString(font, first + " + " + second + " = " + resultName,
-                centerX, topPos + 55, 0xFF41301C);
-        int y = topPos + 69;
-        for (Aspect aspect : Aspect.values()) {
-            if (aspect.isPrimal()) {
-                continue;
-            }
-            List<Aspect> components = aspect.getComponents();
-            String recipe = Component.translatable(components.get(0).getTranslationKey()).getString()
-                    + " + " + Component.translatable(components.get(1).getTranslationKey()).getString()
-                    + " = " + (ClientArcaneProgress.hasDiscovered(aspect)
-                    ? Component.translatable(aspect.getTranslationKey()).getString() : "???");
-            graphics.drawCenteredString(font, recipe, centerX, y,
-                    ClientArcaneProgress.hasDiscovered(aspect) ? 0xFF2E6B2E : 0xFF8A7A5A);
-            y += 9;
+        int x = leftPos + SIDEBAR_WIDTH + 16;
+        int width = workspaceWidth() - 18;
+        int y = topPos + 42;
+        for (net.minecraft.util.FormattedCharSequence line
+                : font.split(Component.translatable("gui.fredplenter.combine_hint_1"), width)) {
+            graphics.drawString(font, line, x, y, 0xFF41301C, false);
+            y += 10;
+        }
+        for (net.minecraft.util.FormattedCharSequence line
+                : font.split(Component.translatable("gui.fredplenter.combine_hint_2"), width)) {
+            graphics.drawString(font, line, x, y + 2, 0xFF5A4028, false);
+            y += 10;
+        }
+        if (selectedCraftAspect != null) {
+            Component selection = Component.translatable("gui.fredplenter.selected_recipe",
+                    Component.translatable(selectedCraftAspect.getTranslationKey()));
+            graphics.drawString(font, font.split(selection, width).getFirst(),
+                    x, y + 5, 0xFF2E6B2E, false);
         }
     }
 

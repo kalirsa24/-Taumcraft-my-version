@@ -10,8 +10,10 @@ import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import com.fredplenter.research.ClientArcaneProgress;
 
 @EventBusSubscriber(modid = Fredplenter.MODID, value = Dist.CLIENT)
 public final class ClientHooks {
@@ -22,6 +24,11 @@ public final class ClientHooks {
     public static void openCodex() {
         PacketDistributor.sendToServer(new RequestProgressPayload());
         Minecraft.getInstance().setScreen(new ArcaneCodexScreen());
+    }
+
+    @SubscribeEvent
+    public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+        ClientArcaneProgress.clear();
     }
 
     @SubscribeEvent

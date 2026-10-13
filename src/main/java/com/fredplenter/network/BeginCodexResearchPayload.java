@@ -30,13 +30,25 @@ public record BeginCodexResearchPayload(ResourceLocation researchId) implements 
     public static void handle(BeginCodexResearchPayload payload, IPayloadContext context) {
         context.enqueueWork(() -> {
             if (!(context.player() instanceof ServerPlayer player)
-                    || !player.getInventory().contains(stack -> stack.is(
-                    com.fredplenter.registry.ModItems.ARCANE_CODEX.get()))) {
+                    || ServerPacketRateLimiter.tryAcquire(
+                            player, ServerPacketRateLimiter.Action.CODEX_RESEARCH) > 0) {
                 return;
             }
 
             Research research = ResearchRegistry.get(payload.researchId());
-            boolean accepted = research != null
+            if (!player.getInventory().contains(stack -> stack.is(
+                    com.fredplenter.registry.ModItems.ARCANE_CODEX.get()))) {
+                PacketDistributor.sendToPlayer(player,
+                        new ResearchStartResultPayload(payload.researchId(), false));
+                player.displayClientMessage(
+                        Component.translatable("message.fredplenter.codex_required"), true);
+                return;
+            }
+
+            boolean alreadyHasNote = research != null
+                    && research.method() == Research.Method.PAPER
+                    && ArcaneProgress.hasUnfinishedResearchNote(player, payload.researchId());
+            boolean accepted = research != null && !alreadyHasNote
                     && ArcaneProgress.get(player).beginCodexResearch(player, payload.researchId());
             PacketDistributor.sendToPlayer(player,
                     new ResearchStartResultPayload(payload.researchId(), accepted));
@@ -49,6 +61,9 @@ public record BeginCodexResearchPayload(ResourceLocation researchId) implements 
                         Component.translatable("message.fredplenter.aspect_research_learned",
                                 Component.translatable(research.getTranslationKey())),
                         true);
+            } else if (alreadyHasNote) {
+                player.displayClientMessage(
+                        Component.translatable("message.fredplenter.note_already_exists"), true);
             } else if (!accepted) {
                 player.displayClientMessage(
                         Component.translatable(research != null && research.method() == Research.Method.PAPER

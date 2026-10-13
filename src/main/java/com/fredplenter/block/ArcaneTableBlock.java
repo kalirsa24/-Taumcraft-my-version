@@ -67,9 +67,16 @@ public class ArcaneTableBlock extends Block implements EntityBlock {
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
-        if (level.getBlockEntity(pos) instanceof MenuProvider menuProvider && !level.isClientSide) {
+        return openTableMenu(level, pos, player);
+    }
+
+    InteractionResult openTableMenu(Level level, BlockPos pos, Player player) {
+        if (!(level.getBlockEntity(pos) instanceof MenuProvider menuProvider)) {
+            return InteractionResult.PASS;
+        }
+        if (!level.isClientSide) {
             if (player instanceof ServerPlayer serverPlayer) {
-                NetworkHandler.sendProgress(serverPlayer);
+                NetworkHandler.sendFullProgress(serverPlayer);
             }
             player.openMenu(menuProvider, buf -> buf.writeBlockPos(pos));
         }
@@ -82,6 +89,7 @@ public class ArcaneTableBlock extends Block implements EntityBlock {
             if (level.getBlockEntity(pos) instanceof ArcaneTableBlockEntity be) {
                 if (!level.isClientSide) {
                     net.minecraft.world.Containers.dropContents(level, pos, be);
+                    be.clearContent();
                 }
                 BlockPos extensionPos = be.getExtensionPos();
                 if (extensionPos != null && level.getBlockState(extensionPos).getBlock() instanceof ArcaneTableExtensionBlock) {

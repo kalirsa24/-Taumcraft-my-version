@@ -30,6 +30,8 @@ public final class ClientScanHandler {
     private static AbstractContainerScreen<?> activeScreen;
     private static UUID requestedFor;
     private static long hoverStartedAt;
+    private static long retryAfterMillis;
+    private static long scanSentAtMillis;
     private static boolean scanSent;
 
     private ClientScanHandler() {
@@ -83,9 +85,15 @@ public final class ClientScanHandler {
             scanSent = false;
         }
         long elapsed = System.currentTimeMillis() - hoverStartedAt;
-        if (!scanSent && elapsed >= 2_000L) {
+        long now = System.currentTimeMillis();
+        if (scanSent && now - scanSentAtMillis >= 5_000L) {
+            scanSent = false;
+            retryAfterMillis = now + 1_000L;
+        }
+        if (!scanSent && elapsed >= 2_000L && now >= retryAfterMillis) {
             PacketDistributor.sendToServer(new ScanItemPayload(itemId));
             scanSent = true;
+            scanSentAtMillis = now;
         }
     }
 
@@ -100,7 +108,10 @@ public final class ClientScanHandler {
             if (ClientArcaneProgress.hasStudiedItem(itemId)) {
                 event.getToolTip().add(Component.translatable("tooltip.fredplenter.studied").withStyle(ChatFormatting.GREEN));
             } else if (itemId.equals(hoveredItem) && !scanSent) {
-                long remaining = Math.max(0, 2_000L - (System.currentTimeMillis() - hoverStartedAt));
+                long now = System.currentTimeMillis();
+                long remaining = Math.max(
+                        Math.max(0, 2_000L - (now - hoverStartedAt)),
+                        Math.max(0, retryAfterMillis - now));
                 event.getToolTip().add(Component.translatable(
                         "tooltip.fredplenter.scanning", String.format(Locale.ROOT, "%.1f", remaining / 1_000.0))
                         .withStyle(ChatFormatting.AQUA));
@@ -113,7 +124,23 @@ public final class ClientScanHandler {
     private static void resetHover() {
         hoveredItem = null;
         hoverStartedAt = 0;
+        retryAfterMillis = 0;
+        scanSentAtMillis = 0;
         scanSent = false;
+    }
+
+    public static void handleResult(ResourceLocation itemId, boolean accepted, int retryTicks) {
+        if (!itemId.equals(hoveredItem)) {
+            return;
+        }
+        if (accepted) {
+            ClientArcaneProgress.markItemStudied(itemId);
+            scanSent = true;
+            return;
+        }
+        scanSent = false;
+        scanSentAtMillis = 0;
+        retryAfterMillis = System.currentTimeMillis() + Math.max(1, retryTicks) * 50L;
     }
 
     private static boolean canScan(Player player) {

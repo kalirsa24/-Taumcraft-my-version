@@ -1,8 +1,8 @@
 package com.fredplenter.aspect;
 
+import com.fredplenter.Fredplenter;
 import net.minecraft.resources.ResourceLocation;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -17,35 +17,31 @@ import java.util.List;
 public enum Aspect {
 
     // --- Primal aspects -------------------------------------------------
-    FLAMMA("flamma", 0xE0522B, null, null),   // fire
-    UNDA("unda", 0x2B7FE0, null, null),       // water
-    HUMUS("humus", 0x7A5230, null, null),     // earth
-    FLATUS("flatus", 0xDCEBEF, null, null),   // air
-    LUX("lux", 0xF5E67A, null, null),         // light
-    TENEBRAE("tenebrae", 0x3A1E4D, null, null), // shadow
+    FLAMMA("flamma", 0xE0522B),   // fire
+    UNDA("unda", 0x2B7FE0),       // water
+    HUMUS("humus", 0x7A5230),     // earth
+    FLATUS("flatus", 0xDCEBEF),   // air
+    LUX("lux", 0xF5E67A),         // light
+    TENEBRAE("tenebrae", 0x3A1E4D), // shadow
 
     // --- Compound aspects -------------------------------------------------
-    VAPOR("vapor", 0xB9C7CE, FLAMMA, UNDA),      // steam: fire + water
-    LIMUS("limus", 0x4B5A3A, UNDA, HUMUS),       // mud: water + earth
-    CINIS("cinis", 0x8A8178, FLAMMA, HUMUS),     // ash: fire + earth
-    PROCELLA("procella", 0x6E8FAF, FLATUS, UNDA), // storm: air + water
-    PULVIS("pulvis", 0xC9B38C, FLATUS, HUMUS),   // dust: air + earth
-    AESTUS("aestus", 0xE08A2B, FLAMMA, VAPOR),    // heat/glow: fire + steam
-    VITA("vita", 0x5FBF5A, LUX, LIMUS),           // life: light + mud
-    MORS("mors", 0x5A3A5A, TENEBRAE, CINIS),     // death: shadow + ash
-    SOMNUS("somnus", 0x5A5A8A, TENEBRAE, PROCELLA), // sleep/dream: shadow + storm
-    MOTUS("motus", 0xD9C23A, FLATUS, PULVIS);    // motion: air + dust
+    VAPOR("vapor", 0xB9C7CE),      // steam: fire + water
+    LIMUS("limus", 0x4B5A3A),      // mud: water + earth
+    CINIS("cinis", 0x8A8178),      // ash: fire + earth
+    PROCELLA("procella", 0x6E8FAF), // storm: air + water
+    PULVIS("pulvis", 0xC9B38C),    // dust: air + earth
+    AESTUS("aestus", 0xE08A2B),    // heat/glow: fire + steam
+    VITA("vita", 0x5FBF5A),        // life: light + mud
+    MORS("mors", 0x5A3A5A),       // death: shadow + ash
+    SOMNUS("somnus", 0x5A5A8A),   // sleep/dream: shadow + storm
+    MOTUS("motus", 0xD9C23A);     // motion: air + dust
 
     private final String id;
     private final int color;
-    private final Aspect parentA;
-    private final Aspect parentB;
 
-    Aspect(String id, int color, Aspect parentA, Aspect parentB) {
+    Aspect(String id, int color) {
         this.id = id;
         this.color = color;
-        this.parentA = parentA;
-        this.parentB = parentB;
     }
 
     public String getId() {
@@ -53,7 +49,7 @@ public enum Aspect {
     }
 
     public ResourceLocation getRegistryName() {
-        return ResourceLocation.fromNamespaceAndPath("fredplenter", id);
+        return ResourceLocation.fromNamespaceAndPath(Fredplenter.MODID, id);
     }
 
     public String getTranslationKey() {
@@ -65,26 +61,12 @@ public enum Aspect {
     }
 
     public boolean isPrimal() {
-        return parentA == null && parentB == null;
+        return AspectRecipe.forResult(this) == null;
     }
 
     public static Aspect byId(String id) {
         for (Aspect aspect : values()) {
             if (aspect.id.equals(id)) {
-                return aspect;
-            }
-        }
-        return null;
-    }
-
-    public static Aspect combine(Aspect first, Aspect second) {
-        if (first == null || second == null || first == second) {
-            return null;
-        }
-        for (Aspect aspect : values()) {
-            if (aspect.parentA != null
-                    && (aspect.parentA == first && aspect.parentB == second
-                    || aspect.parentA == second && aspect.parentB == first)) {
                 return aspect;
             }
         }
@@ -103,9 +85,7 @@ public enum Aspect {
     }
 
     public List<Aspect> getComponents() {
-        List<Aspect> list = new ArrayList<>();
-        if (parentA != null) list.add(parentA);
-        if (parentB != null) list.add(parentB);
-        return list;
+        AspectRecipe recipe = AspectRecipe.forResult(this);
+        return recipe == null ? List.of() : recipe.components();
     }
 }

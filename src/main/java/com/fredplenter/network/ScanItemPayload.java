@@ -9,8 +9,9 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 public record ScanItemPayload(ResourceLocation itemId) implements CustomPacketPayload {
@@ -27,21 +28,41 @@ public record ScanItemPayload(ResourceLocation itemId) implements CustomPacketPa
 
     public static void handle(ScanItemPayload payload, IPayloadContext context) {
         context.enqueueWork(() -> {
-            if (!(context.player() instanceof ServerPlayer player)
-                    || !(player.getMainHandItem().is(ModItems.AURA_SCANNER.get())
-                    || player.getMainHandItem().is(ModItems.ARCANE_WAND.get()))
-                    || !"minecraft".equals(payload.itemId().getNamespace())
-                    || !ModItemCheck.isPresentInOpenMenu(player, payload.itemId())) {
+            if (!(context.player() instanceof ServerPlayer player)) {
+                return;
+            }
+            int retryTicks = ServerPacketRateLimiter.tryAcquire(
+                    player, ServerPacketRateLimiter.Action.SCAN_ITEM);
+            if (retryTicks > 0) {
+                sendResult(player, payload.itemId(), false, retryTicks);
                 return;
             }
 
-            if (!ArcaneProgress.get(player).markItemStudied(
-                    player.getUUID(), payload.itemId(), VanillaAspectMap.aspectsFor(payload.itemId()))) {
+            if (!(player.getMainHandItem().is(ModItems.AURA_SCANNER.get())
+                    || player.getMainHandItem().is(ModItems.ARCANE_WAND.get()))
+                    || !"minecraft".equals(payload.itemId().getNamespace())
+                    || !BuiltInRegistries.ITEM.containsKey(payload.itemId())
+                    || BuiltInRegistries.ITEM.get(payload.itemId()) == Items.AIR
+                    || !ModItemCheck.isPresentInOpenMenu(player, payload.itemId())) {
+                sendResult(player, payload.itemId(), false,
+                        ServerPacketRateLimiter.Action.SCAN_ITEM.intervalTicks());
                 return;
             }
-            player.displayClientMessage(
-                    net.minecraft.network.chat.Component.translatable("message.fredplenter.item_scanned"), true);
-            NetworkHandler.sendProgress(player);
+            ArcaneProgress progress = ArcaneProgress.get(player);
+            boolean newlyStudied = progress.markItemStudied(
+                    player.getUUID(), payload.itemId(), VanillaAspectMap.aspectsFor(payload.itemId()));
+            boolean studied = newlyStudied || progress.hasStudiedItem(player.getUUID(), payload.itemId());
+            if (newlyStudied) {
+                player.displayClientMessage(
+                        net.minecraft.network.chat.Component.translatable("message.fredplenter.item_scanned"), true);
+                NetworkHandler.sendProgress(player);
+            }
+            sendResult(player, payload.itemId(), studied, 0);
         });
+    }
+
+    private static void sendResult(ServerPlayer player, ResourceLocation itemId, boolean accepted, int retryTicks) {
+        net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(
+                player, new ScanResultPayload(itemId, accepted, retryTicks));
     }
 }

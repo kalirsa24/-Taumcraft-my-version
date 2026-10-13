@@ -9,6 +9,8 @@ import com.fredplenter.registry.ModMenuTypes;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 
 /**
  * Fredplenter - an original, open-source Thaumonomicon-inspired magic mod.
@@ -33,5 +35,9 @@ public class Fredplenter {
         ModCreativeTab.register(modEventBus);
 
         NetworkHandler.register(modEventBus);
+        NeoForge.EVENT_BUS.addListener(NetworkHandler::onPlayerLoggedIn);
+        NeoForge.EVENT_BUS.addListener(NetworkHandler::onPlayerRespawned);
+        NeoForge.EVENT_BUS.addListener(NetworkHandler::onPlayerChangedDimension);
+        NeoForge.EVENT_BUS.addListener(NetworkHandler::onPlayerLoggedOut);
     }
 }

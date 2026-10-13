@@ -10,6 +10,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
+import net.minecraft.world.level.material.PushReaction;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -25,6 +26,7 @@ public final class ModBlocks {
                     .mapColor(MapColor.COLOR_PURPLE)
                     .strength(2.5f)
                     .sound(SoundType.WOOD)
+                    .pushReaction(PushReaction.BLOCK)
                     .noOcclusion()));
 
     public static final DeferredBlock<ArcaneTableExtensionBlock> ARCANE_TABLE_EXTENSION = BLOCKS.register(
@@ -33,6 +35,7 @@ public final class ModBlocks {
                     .mapColor(MapColor.COLOR_PURPLE)
                     .strength(2.5f)
                     .sound(SoundType.WOOD)
+                    .pushReaction(PushReaction.BLOCK)
                     .noOcclusion()
                     .noLootTable()));
 
@@ -43,6 +46,8 @@ public final class ModBlocks {
                     .strength(0.3f)
                     .sound(SoundType.AMETHYST)
                     .lightLevel(state -> 8)
+                    .pushReaction(PushReaction.BLOCK)
+                    .noLootTable()
                     .noOcclusion()));
 
     public static final DeferredItem<BlockItem> ARCANE_TABLE_ITEM = BLOCK_ITEMS.registerSimpleBlockItem(ARCANE_TABLE);

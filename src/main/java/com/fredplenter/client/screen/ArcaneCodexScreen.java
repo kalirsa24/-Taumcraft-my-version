@@ -40,6 +40,7 @@ public class ArcaneCodexScreen extends Screen {
     private Research selectedResearch;
     private Button researchButton;
     private boolean requestPending;
+    private long requestStartedAt;
     private int displayedRevision = -1;
 
     public ArcaneCodexScreen() {
@@ -48,6 +49,7 @@ public class ArcaneCodexScreen extends Screen {
 
     @Override
     protected void init() {
+        requestPending = false;
         int left = frameLeft();
         int top = frameTop();
         searchBox = new EditBox(font, left + 14, top + 8, Math.max(120, width - left * 2 - 230), 16,
@@ -62,6 +64,14 @@ public class ArcaneCodexScreen extends Screen {
                 .build();
         researchButton.visible = false;
         addRenderableWidget(researchButton);
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        if (requestPending && System.currentTimeMillis() - requestStartedAt >= 5_000L) {
+            requestPending = false;
+        }
     }
 
     @Override
@@ -278,6 +288,7 @@ public class ArcaneCodexScreen extends Screen {
             return;
         }
         requestPending = true;
+        requestStartedAt = System.currentTimeMillis();
         ClientArcaneProgress.clearResearchResult();
         PacketDistributor.sendToServer(new BeginCodexResearchPayload(selectedResearch.id()));
     }

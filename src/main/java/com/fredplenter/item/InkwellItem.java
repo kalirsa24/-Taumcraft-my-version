@@ -1,7 +1,6 @@
 package com.fredplenter.item;
 
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -62,9 +61,8 @@ public class InkwellItem extends Item {
     }
 
     private static void setInk(ItemStack stack, int amount) {
-        CompoundTag tag = new CompoundTag();
-        tag.putInt("Ink", Math.max(0, Math.min(CAPACITY, amount)));
-        stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+        int boundedAmount = Math.max(0, Math.min(CAPACITY, amount));
+        CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> tag.putInt("Ink", boundedAmount));
     }
 
     @Override

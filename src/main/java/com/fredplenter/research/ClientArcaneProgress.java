@@ -26,11 +26,13 @@ public final class ClientArcaneProgress {
     private ClientArcaneProgress() {
     }
 
-    public static void load(CompoundTag tag) {
+    public static void load(CompoundTag tag, boolean fullSnapshot) {
         ASPECTS.clear();
         COMPLETED.clear();
-        STUDIED_ITEMS.clear();
         DISCOVERED.clear();
+        if (fullSnapshot) {
+            STUDIED_ITEMS.clear();
+        }
 
         CompoundTag aspects = tag.getCompound("Aspects");
         for (Aspect aspect : Aspect.values()) {
@@ -40,7 +42,9 @@ public final class ClientArcaneProgress {
             }
         }
         readLocations(tag.getList("CompletedResearch", StringTag.TAG_STRING), COMPLETED);
-        readLocations(tag.getList("StudiedItems", StringTag.TAG_STRING), STUDIED_ITEMS);
+        if (fullSnapshot) {
+            readLocations(tag.getList("StudiedItems", StringTag.TAG_STRING), STUDIED_ITEMS);
+        }
         ListTag discovered = tag.getList("DiscoveredAspects", StringTag.TAG_STRING);
         for (int index = 0; index < discovered.size(); index++) {
             Aspect aspect = Aspect.byId(discovered.getString(index));
@@ -53,6 +57,21 @@ public final class ClientArcaneProgress {
                 DISCOVERED.add(aspect);
             }
         }
+        revision++;
+    }
+
+    public static void markItemStudied(ResourceLocation itemId) {
+        if (STUDIED_ITEMS.add(itemId)) {
+            revision++;
+        }
+    }
+
+    public static void clear() {
+        ASPECTS.clear();
+        COMPLETED.clear();
+        STUDIED_ITEMS.clear();
+        DISCOVERED.clear();
+        clearResearchResult();
         revision++;
     }
 

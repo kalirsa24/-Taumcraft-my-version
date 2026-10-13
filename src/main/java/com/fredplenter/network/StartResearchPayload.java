@@ -28,6 +28,10 @@ public record StartResearchPayload(ResourceLocation researchId) implements Custo
             if (!(context.player() instanceof ServerPlayer player)) {
                 return;
             }
+            if (ServerPacketRateLimiter.tryAcquire(
+                    player, ServerPacketRateLimiter.Action.START_RESEARCH) > 0) {
+                return;
+            }
             boolean accepted = player.containerMenu instanceof ArcaneTableMenu menu
                     && menu.beginResearch(player, payload.researchId());
             net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(

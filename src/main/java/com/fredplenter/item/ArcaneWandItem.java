@@ -22,6 +22,7 @@ import java.util.List;
 public class ArcaneWandItem extends Item {
 
     public static final int CAPACITY_PER_ASPECT = 100;
+    private static final int USE_COOLDOWN_TICKS = 5;
 
     public ArcaneWandItem(Properties properties) {
         super(properties);
@@ -43,11 +44,15 @@ public class ArcaneWandItem extends Item {
         ItemStack wand = context.getItemInHand();
         CompoundTag stored = getStored(wand);
         int drained = 0;
+        boolean hasCapacity = false;
+        boolean nodeHasVis = false;
         for (Aspect aspect : Aspect.values()) {
             if (!aspect.isPrimal()) {
                 continue;
             }
             int current = Math.max(0, Math.min(CAPACITY_PER_ASPECT, stored.getInt(aspect.getId())));
+            hasCapacity |= current < CAPACITY_PER_ASPECT;
+            nodeHasVis |= node.getVis(aspect) > 0;
             if (current >= CAPACITY_PER_ASPECT) {
                 continue;
             }
@@ -60,12 +65,17 @@ public class ArcaneWandItem extends Item {
 
         if (drained > 0) {
             wand.set(DataComponents.CUSTOM_DATA, CustomData.of(stored));
+            player.getCooldowns().addCooldown(this, USE_COOLDOWN_TICKS);
             level.playSound(null, context.getClickedPos(), SoundEvents.AMETHYST_BLOCK_CHIME,
                     SoundSource.PLAYERS, 0.7F, 1.2F);
             player.displayClientMessage(Component.translatable("message.fredplenter.wand_drained", drained), true);
             return InteractionResult.CONSUME;
         }
-        player.displayClientMessage(Component.translatable("message.fredplenter.node_empty"), true);
+        player.getCooldowns().addCooldown(this, USE_COOLDOWN_TICKS);
+        String message = !hasCapacity ? "message.fredplenter.wand_full"
+                : nodeHasVis ? "message.fredplenter.wand_cannot_hold_node_aspects"
+                : "message.fredplenter.node_empty";
+        player.displayClientMessage(Component.translatable(message), true);
         return InteractionResult.CONSUME;
     }
 
@@ -84,8 +94,8 @@ public class ArcaneWandItem extends Item {
             total += amount;
         }
         int capacity = CAPACITY_PER_ASPECT * 6;
-        int averagePercent = total * 100 / capacity;
-        tooltip.add(Component.translatable("tooltip.fredplenter.wand_capacity", total, capacity, averagePercent));
+        int fillPercent = total * 100 / capacity;
+        tooltip.add(Component.translatable("tooltip.fredplenter.wand_capacity", total, capacity, fillPercent));
         tooltip.add(Component.translatable("tooltip.fredplenter.wand_shift_hint"));
         tooltip.add(Component.translatable("tooltip.fredplenter.wand_scan_help"));
     }

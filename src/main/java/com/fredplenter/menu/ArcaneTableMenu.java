@@ -27,6 +27,8 @@ public class ArcaneTableMenu extends AbstractContainerMenu {
 
     public static final int NOTE_SLOT_X = 41;
     public static final int NOTE_SLOT_Y = 146;
+    public static final int PLAYER_INVENTORY_Y = 274;
+    public static final int PLAYER_HOTBAR_Y = 332;
 
     private final ArcaneTableBlockEntity blockEntity;
     @Nullable
@@ -75,11 +77,11 @@ public class ArcaneTableMenu extends AbstractContainerMenu {
         for (int row = 0; row < 3; row++) {
             for (int column = 0; column < 9; column++) {
                 addSlot(new Slot(inventory, column + row * 9 + 9,
-                        inventoryLeft + column * 18, 184 + row * 18));
+                        inventoryLeft + column * 18, PLAYER_INVENTORY_Y + row * 18));
             }
         }
         for (int column = 0; column < 9; column++) {
-            addSlot(new Slot(inventory, column, inventoryLeft + column * 18, 242));
+            addSlot(new Slot(inventory, column, inventoryLeft + column * 18, PLAYER_HOTBAR_Y));
         }
     }
 
@@ -109,7 +111,7 @@ public class ArcaneTableMenu extends AbstractContainerMenu {
 
     public boolean beginResearch(ServerPlayer player, ResourceLocation researchId) {
         Research research = ResearchRegistry.get(researchId);
-        if (activeResearch != null || research == null || research.method() != Research.Method.PAPER
+        if (research == null || research.method() != Research.Method.PAPER
                 || !isNoteFor(research) || ResearchNoteItem.isComplete(getNoteStack())
                 || !ResearchRegistry.isAvailable(research, ArcaneProgress.get(player).getCompletedResearch(player.getUUID()))) {
             return false;
@@ -145,11 +147,7 @@ public class ArcaneTableMenu extends AbstractContainerMenu {
 
     @Override
     public boolean stillValid(Player player) {
-        return blockEntity != null && blockEntity.getLevel() != null
-                && player.distanceToSqr(
-                        blockEntity.getBlockPos().getX() + 0.5,
-                        blockEntity.getBlockPos().getY() + 0.5,
-                        blockEntity.getBlockPos().getZ() + 0.5) <= 64.0;
+        return blockEntity != null && blockEntity.stillValid(player);
     }
 
     @Override

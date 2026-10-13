@@ -3,7 +3,6 @@ package com.fredplenter.block;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -42,12 +41,11 @@ public class ArcaneTableExtensionBlock extends Block {
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
-        // The main block sits on the opposite side of the facing direction.
         BlockPos mainPos = pos.relative(state.getValue(BlockStateProperties.HORIZONTAL_FACING).getOpposite());
-        if (level.getBlockEntity(mainPos) instanceof MenuProvider menuProvider && !level.isClientSide) {
-            player.openMenu(menuProvider, buf -> buf.writeBlockPos(mainPos));
+        if (!(level.getBlockState(mainPos).getBlock() instanceof ArcaneTableBlock mainBlock)) {
+            return InteractionResult.PASS;
         }
-        return InteractionResult.SUCCESS;
+        return mainBlock.openTableMenu(level, mainPos, player);
     }
 
     @Override

@@ -3,6 +3,8 @@ package com.fredplenter.network;
 import com.fredplenter.Fredplenter;
 import com.fredplenter.item.ResearchNoteItem;
 import com.fredplenter.research.ArcaneProgress;
+import com.fredplenter.research.Research;
+import com.fredplenter.research.ResearchRegistry;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -31,6 +33,10 @@ public record LearnNotePayload(ResourceLocation researchId) implements CustomPac
             if (!(context.player() instanceof ServerPlayer player)) {
                 return;
             }
+            if (ServerPacketRateLimiter.tryAcquire(
+                    player, ServerPacketRateLimiter.Action.LEARN_NOTE) > 0) {
+                return;
+            }
             for (InteractionHand hand : InteractionHand.values()) {
                 ItemStack stack = player.getItemInHand(hand);
                 if (stack.getItem() instanceof ResearchNoteItem
@@ -38,11 +44,11 @@ public record LearnNotePayload(ResourceLocation researchId) implements CustomPac
                         && payload.researchId().equals(ResearchNoteItem.researchId(stack))) {
                     if (ArcaneProgress.get(player).learnFromNote(player.getUUID(), payload.researchId())) {
                         stack.shrink(1);
+                        Research research = ResearchRegistry.get(payload.researchId());
                         player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
                                 "message.fredplenter.research_learned",
                                 net.minecraft.network.chat.Component.translatable(
-                                        "research." + payload.researchId().getNamespace() + "."
-                                                + payload.researchId().getPath() + ".title")), true);
+                                        research.getTranslationKey())), true);
                     } else {
                         player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
                                 "message.fredplenter.note_unusable"), true);

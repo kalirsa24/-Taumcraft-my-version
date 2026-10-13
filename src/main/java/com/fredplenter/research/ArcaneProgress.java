@@ -1,6 +1,7 @@
 package com.fredplenter.research;
 
 import com.fredplenter.aspect.Aspect;
+import com.fredplenter.aspect.AspectRecipe;
 import com.fredplenter.aspect.AspectStack;
 import com.fredplenter.registry.ModItems;
 import com.fredplenter.item.InkwellItem;
@@ -33,7 +34,7 @@ public final class ArcaneProgress extends SavedData {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ArcaneProgress.class);
     private static final String DATA_NAME = "fredplenter_arcane_progress";
-    private static final int MAX_ASPECT_POINTS = 1_000_000;
+    public static final int MAX_ASPECT_POINTS = 1_000_000;
     private static final Factory<ArcaneProgress> FACTORY =
             new Factory<>(ArcaneProgress::new, ArcaneProgress::load, DataFixTypes.LEVEL);
 
@@ -115,24 +116,33 @@ public final class ArcaneProgress extends SavedData {
         return Set.copyOf(state.discoveredAspects);
     }
 
-    public boolean combineAspects(UUID playerId, Aspect first, Aspect second) {
-        Aspect result = Aspect.combine(first, second);
-        if (result == null) {
-            return false;
+    public int createAspect(UUID playerId, Aspect result, boolean createMaximum) {
+        AspectRecipe recipe = result == null ? null : AspectRecipe.forResult(result);
+        if (recipe == null) {
+            return 0;
         }
+
         PlayerState state = state(playerId);
         ensurePrimals(state);
-        if (!state.discoveredAspects.contains(first) || !state.discoveredAspects.contains(second)
-                || state.aspects.getOrDefault(first, 0) < 1
-                || state.aspects.getOrDefault(second, 0) < 1) {
-            return false;
+        if (!state.discoveredAspects.contains(recipe.first())
+                || !state.discoveredAspects.contains(recipe.second())) {
+            return 0;
         }
-        addPoints(state, first, -1);
-        addPoints(state, second, -1);
-        addPoints(state, result, 1);
+
+        int available = Math.min(state.aspects.getOrDefault(recipe.first(), 0),
+                state.aspects.getOrDefault(recipe.second(), 0));
+        available = Math.min(available, MAX_ASPECT_POINTS - state.aspects.getOrDefault(result, 0));
+        int amount = createMaximum ? available : Math.min(1, available);
+        if (amount <= 0) {
+            return 0;
+        }
+
+        addPoints(state, recipe.first(), -amount);
+        addPoints(state, recipe.second(), -amount);
+        addPoints(state, result, amount);
         state.discoveredAspects.add(result);
         setDirty();
-        return true;
+        return amount;
     }
 
     public boolean hasResearch(UUID playerId, ResourceLocation researchId) {
@@ -152,15 +162,18 @@ public final class ArcaneProgress extends SavedData {
         return true;
     }
 
-    public boolean startResearch(ServerPlayer player, ResourceLocation researchId) {
-        Research research = ResearchRegistry.get(researchId);
-        if (research == null || research.method() != Research.Method.PAPER
-                || !canStartResearch(player.getUUID(), research)
-                || !hasItem(player.getInventory(), Items.PAPER)) {
-            return false;
-        }
-        consumeOne(player.getInventory(), Items.PAPER);
-        return true;
+    public static boolean hasUnfinishedResearchNote(ServerPlayer player, ResourceLocation researchId) {
+        return player.getInventory().items.stream().anyMatch(stack ->
+                stack.is(ModItems.RESEARCH_NOTE.get())
+                        && researchId.equals(ResearchNoteItem.researchId(stack))
+                        && !ResearchNoteItem.isComplete(stack))
+                || hasUnfinishedResearchNote(player.getOffhandItem(), researchId);
+    }
+
+    private static boolean hasUnfinishedResearchNote(ItemStack stack, ResourceLocation researchId) {
+        return stack.is(ModItems.RESEARCH_NOTE.get())
+                && researchId.equals(ResearchNoteItem.researchId(stack))
+                && !ResearchNoteItem.isComplete(stack);
     }
 
     public boolean beginCodexResearch(ServerPlayer player, ResourceLocation researchId) {
@@ -172,12 +185,23 @@ public final class ArcaneProgress extends SavedData {
         PlayerState state = state(player.getUUID());
         if (research.method() == Research.Method.PAPER) {
             Inventory inventory = player.getInventory();
-            if (!hasItem(inventory, Items.PAPER) || !hasInk(inventory)) {
+            if (hasUnfinishedResearchNote(player, researchId)
+                    || !hasItem(inventory, Items.PAPER) || !hasInk(inventory)) {
                 return false;
             }
-            consumeOne(inventory, Items.PAPER);
+            if (!consumeOne(inventory, Items.PAPER)) {
+                LOGGER.warn("Could not consume paper for research {} after validating player {}",
+                        researchId, player.getUUID());
+                return false;
+            }
             if (!InkwellItem.consumeInk(player)) {
-                throw new IllegalStateException("Research inkwell ran out of ink after validation");
+                ItemStack paper = new ItemStack(Items.PAPER);
+                if (!inventory.add(paper)) {
+                    player.drop(paper, false);
+                }
+                LOGGER.warn("Could not consume inkwell ink for research {} after validating player {}",
+                        researchId, player.getUUID());
+                return false;
             }
             ItemStack note = ModItems.RESEARCH_NOTE.get().createFor(researchId);
             if (!inventory.add(note)) {
@@ -263,7 +287,7 @@ public final class ArcaneProgress extends SavedData {
         return true;
     }
 
-    public CompoundTag createClientSnapshot(UUID playerId) {
+    public CompoundTag createClientSnapshot(UUID playerId, boolean fullSnapshot) {
         PlayerState state = state(playerId);
         CompoundTag snapshot = new CompoundTag();
         CompoundTag aspects = new CompoundTag();
@@ -272,8 +296,9 @@ public final class ArcaneProgress extends SavedData {
         }
         snapshot.put("Aspects", aspects);
         snapshot.put("CompletedResearch", stringList(state.completedResearch.stream().map(ResourceLocation::toString).toList()));
-        snapshot.put("StudiedItems", stringList(state.studiedItems.stream().map(ResourceLocation::toString).toList()));
-        snapshot.put("StudiedNodes", stringList(new ArrayList<>(state.studiedNodes)));
+        if (fullSnapshot) {
+            snapshot.put("StudiedItems", stringList(state.studiedItems.stream().map(ResourceLocation::toString).toList()));
+        }
         snapshot.put("DiscoveredAspects",
                 stringList(getDiscovered(playerId).stream().map(Aspect::getId).toList()));
         return snapshot;
@@ -330,14 +355,14 @@ public final class ArcaneProgress extends SavedData {
                 || inventory.offhand.stream().anyMatch(InkwellItem::hasInk);
     }
 
-    private static void consumeOne(Inventory inventory, net.minecraft.world.item.Item item) {
+    private static boolean consumeOne(Inventory inventory, net.minecraft.world.item.Item item) {
         for (ItemStack stack : inventory.items) {
             if (stack.is(item)) {
                 stack.shrink(1);
-                return;
+                return true;
             }
         }
-        throw new IllegalStateException("Required research paper disappeared during completion");
+        return false;
     }
 
     private static ListTag stringList(List<String> values) {
