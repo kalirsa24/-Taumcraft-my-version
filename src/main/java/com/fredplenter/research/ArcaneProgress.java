@@ -180,26 +180,48 @@ public final class ArcaneProgress extends SavedData {
         return true;
     }
 
+    /**
+     * Validates a path placed on the table hex grid: it must start and end at the
+     * note's anchor aspects, pass through the required middle aspect, every two
+     * neighbouring tiles must be linked (see Aspect.isLinkedTo), every placed
+     * (non-anchor) tile must be discovered, and the player pays 1 point per placed
+     * tile. Nothing is charged when validation fails.
+     */
     public boolean completeResearch(ServerPlayer player, ResourceLocation researchId, List<Aspect> solution) {
         Research research = ResearchRegistry.get(researchId);
-        if (research == null || research.method() != Research.Method.PAPER
-                || !research.puzzle().equals(solution)) {
+        if (research == null || research.method() != Research.Method.PAPER || research.puzzle().size() != 3) {
             return false;
         }
-
+        if (solution.size() < 3 || solution.size() > 19
+                || solution.getFirst() != research.puzzle().getFirst()
+                || solution.getLast() != research.puzzle().getLast()
+                || !solution.contains(research.puzzle().get(1))) {
+            return false;
+        }
+        for (int i = 1; i < solution.size(); i++) {
+            if (!solution.get(i - 1).isLinkedTo(solution.get(i))) {
+                return false;
+            }
+        }
         PlayerState state = state(player.getUUID());
         if (!ResearchRegistry.isAvailable(research, state.completedResearch)) {
             return false;
         }
-        for (AspectStack cost : research.cost()) {
-            if (state.aspects.getOrDefault(cost.aspect(), 0) < cost.amount()) {
+        ensurePrimals(state);
+        java.util.Map<Aspect, Integer> placedCost = new java.util.EnumMap<>(Aspect.class);
+        for (int i = 1; i < solution.size() - 1; i++) {
+            Aspect placed = solution.get(i);
+            if (!state.discoveredAspects.contains(placed)) {
+                return false;
+            }
+            placedCost.merge(placed, 1, Integer::sum);
+        }
+        for (var entry : placedCost.entrySet()) {
+            if (state.aspects.getOrDefault(entry.getKey(), 0) < entry.getValue()) {
                 return false;
             }
         }
-
-        for (AspectStack cost : research.cost()) {
-            addPoints(state, cost.aspect(), -cost.amount());
-        }
+        placedCost.forEach((aspect, amount) -> addPoints(state, aspect, -amount));
         setDirty();
         return true;
     }

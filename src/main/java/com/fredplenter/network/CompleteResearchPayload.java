@@ -52,7 +52,7 @@ public record CompleteResearchPayload(ResourceLocation researchId, String soluti
     }
 
     private static List<Aspect> parseSolution(String value) {
-        if (value.isBlank() || value.length() > 128) {
+        if (value.isBlank() || value.length() > 256) {
             return null;
         }
         List<Aspect> result = new ArrayList<>();

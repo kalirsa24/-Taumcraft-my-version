@@ -31,6 +31,10 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
     private final List<HexPosition> selectedCells = new ArrayList<>(3);
     private Research selectedResearch;
     private Research activeResearch;
+    private static final HexPosition START_CELL = new HexPosition(-2, 0);
+    private static final HexPosition END_CELL = new HexPosition(2, 0);
+    private final java.util.Map<HexPosition, Aspect> placedTiles = new java.util.HashMap<>();
+    private Aspect placementAspect;
     private Aspect combineFirst;
     private Aspect combineSecond;
     private boolean awaitingPuzzleResult;
@@ -82,9 +86,11 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
                     activeResearch = null;
                     selectedPath.clear();
                     selectedCells.clear();
+                    placedTiles.clear();
                 } else {
                     selectedPath.clear();
                     selectedCells.clear();
+                    placedTiles.clear();
                     puzzleFeedback = "message.fredplenter.research_failed";
                 }
             }
@@ -149,6 +155,7 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
                         ignored -> {
                             selectedPath.clear();
                             selectedCells.clear();
+                            placedTiles.clear();
                             puzzleFeedback = "";
                         })
                 .pos(controlsLeft, topPos + 148)
@@ -160,6 +167,7 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
                             activeResearch = null;
                             selectedPath.clear();
                             selectedCells.clear();
+                            placedTiles.clear();
                             awaitingPuzzleResult = false;
                             awaitingResearchStart = false;
                             puzzleFeedback = "";
@@ -176,57 +184,69 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
         activeResearch = research;
         selectedPath.clear();
         selectedCells.clear();
+        placedTiles.clear();
+        placementAspect = null;
         awaitingResearchStart = true;
         awaitingPuzzleResult = false;
         puzzleFeedback = "";
         rebuildButtons();
     }
 
+    /**
+     * Hex-link puzzle (PNG-2 style): start and end anchors are fixed tiles on the
+     * parchment. Pick an aspect on the left, click a hex next to the chain to lay
+     * a tile (1 point, charged only on success), click the end anchor to finish.
+     * Neighbouring tiles must be linked aspects; the chain must pass through the
+     * note's required middle aspect. The server re-validates all of it.
+     */
     private void selectHex(HexPosition cell) {
-        Aspect aspect = aspectAt(cell);
+        Aspect start = activeResearch.puzzle().getFirst();
+        Aspect end = activeResearch.puzzle().getLast();
+        if (cell.equals(START_CELL)) {
+            if (selectedPath.isEmpty()) {
+                selectedPath.add(start);
+                selectedCells.add(cell);
+                puzzleFeedback = "gui.fredplenter.place_aspect_first";
+            }
+            return;
+        }
         if (selectedPath.isEmpty()) {
-            if (aspect != activeResearch.puzzle().getFirst()) {
-                puzzleFeedback = "gui.fredplenter.start_with_aspect";
-                return;
+            puzzleFeedback = "gui.fredplenter.start_with_aspect";
+            return;
+        }
+        HexPosition lastCell = selectedCells.getLast();
+        Aspect lastAspect = selectedPath.getLast();
+        if (placedTiles.containsKey(cell)) {
+            if (cell.equals(lastCell)) { // click the tail tile again to take it back, free
+                placedTiles.remove(cell);
+                selectedPath.removeLast();
+                selectedCells.removeLast();
+                puzzleFeedback = "";
             }
-            selectedPath.add(aspect);
+            return;
+        }
+        if (cell.equals(END_CELL)) {
+            if (!lastCell.isAdjacent(cell)) { puzzleFeedback = "gui.fredplenter.connect_adjacent"; return; }
+            if (!selectedPath.contains(activeResearch.puzzle().get(1))) { puzzleFeedback = "gui.fredplenter.need_middle"; return; }
+            if (!lastAspect.isLinkedTo(end)) { puzzleFeedback = "gui.fredplenter.tile_not_linked"; return; }
+            selectedPath.add(end);
             selectedCells.add(cell);
-            puzzleFeedback = "";
+            String encoded = String.join(",", selectedPath.stream().map(Aspect::getId).toList());
+            PacketDistributor.sendToServer(new CompleteResearchPayload(activeResearch.id(), encoded));
+            awaitingPuzzleResult = true;
+            puzzleFeedback = "gui.fredplenter.research_waiting";
             return;
         }
-
-        HexPosition previous = selectedCells.getLast();
-        if (!previous.isAdjacent(cell)) {
-            puzzleFeedback = "gui.fredplenter.connect_adjacent";
-            return;
-        }
-
-        if (selectedPath.size() == 1) {
-            if (aspect != activeResearch.puzzle().get(1)) {
-                selectedPath.clear();
-                selectedCells.clear();
-                puzzleFeedback = "gui.fredplenter.wrong_path";
-                return;
-            }
-            selectedPath.add(aspect);
-            selectedCells.add(cell);
-            puzzleFeedback = "";
-            return;
-        }
-
-        if (aspect != activeResearch.puzzle().getLast()) {
-            selectedPath.clear();
-            selectedCells.clear();
-            puzzleFeedback = "gui.fredplenter.wrong_path";
-            return;
-        }
-
-        selectedPath.add(aspect);
+        if (!lastCell.isAdjacent(cell)) { puzzleFeedback = "gui.fredplenter.connect_adjacent"; return; }
+        if (placementAspect == null) { puzzleFeedback = "gui.fredplenter.place_aspect_first"; return; }
+        if (!lastAspect.isLinkedTo(placementAspect)) { puzzleFeedback = "gui.fredplenter.tile_not_linked"; return; }
+        long alreadyUsed = selectedPath.stream().skip(1).filter(a -> a == placementAspect).count();
+        if (menu.getAspectPoints(placementAspect) <= alreadyUsed) { puzzleFeedback = "gui.fredplenter.tile_not_linked"; return; }
+        placedTiles.put(cell, placementAspect);
+        selectedPath.add(placementAspect);
         selectedCells.add(cell);
-        String encodedSolution = String.join(",", selectedPath.stream().map(Aspect::getId).toList());
-        PacketDistributor.sendToServer(new CompleteResearchPayload(activeResearch.id(), encodedSolution));
-        awaitingPuzzleResult = true;
-        puzzleFeedback = "gui.fredplenter.research_waiting";
+        puzzleFeedback = selectedPath.contains(activeResearch.puzzle().get(1))
+                ? "gui.fredplenter.click_end_to_finish" : "gui.fredplenter.need_middle";
     }
 
     @Override
@@ -238,6 +258,13 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
                 else if (combineSecond == null || combineSecond == clickedAspect) combineSecond = clickedAspect;
                 else { combineFirst = clickedAspect; combineSecond = null; }
                 rebuildButtons();
+                return true;
+            }
+        }
+        if (activeResearch != null && button == 0) {
+            Aspect palette = findSidebarAspect(mouseX, mouseY);
+            if (palette != null && ClientArcaneProgress.hasDiscovered(palette)) {
+                placementAspect = palette;
                 return true;
             }
         }
@@ -448,11 +475,12 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
                 .collect(java.util.stream.Collectors.joining(" → "));
         graphics.drawWordWrap(font,
                 Component.translatable("gui.fredplenter.research_path").append(": " + path),
-                x, y, width, 0xFFE0CCAA);
-        graphics.drawWordWrap(font,
-                Component.translatable(puzzleFeedback.isEmpty()
-                        ? "gui.fredplenter.choose_link" : puzzleFeedback),
-                x, y + 13, width, 0xFFE0CCAA);
+                x, y, width, 0xFF41301C);
+        String feedback = puzzleFeedback.isEmpty() ? "gui.fredplenter.place_aspect_first" : puzzleFeedback;
+        if (placementAspect != null) {
+            feedback = feedback + " [" + Component.translatable(placementAspect.getTranslationKey()).getString() + "]";
+        }
+        graphics.drawWordWrap(font, Component.translatable(feedback), x, y + 13, width, 0xFF41301C);
     }
 
     private void renderResearchPuzzle(GuiGraphics graphics, int mouseX, int mouseY) {
@@ -474,8 +502,7 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
             drawHex(graphics, centerX, centerY, HEX_SIZE + 2, border);
             drawHex(graphics, centerX, centerY, HEX_SIZE, 0xFFB29361);
             if (aspect != null) {
-                boolean keyNode = aspect == activeResearch.puzzle().getFirst()
-                        || aspect == activeResearch.puzzle().getLast();
+                boolean keyNode = cell.equals(START_CELL) || cell.equals(END_CELL);
                 int aspectColor = keyNode ? aspect.getColor() : shade(aspect.getColor(), 0.76f);
                 drawHex(graphics, centerX, centerY, HEX_SIZE - 2, aspectColor);
                 graphics.drawCenteredString(font, aspectMark(aspect),
@@ -570,21 +597,10 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
     }
 
     private Aspect aspectAt(HexPosition position) {
-        if (activeResearch == null) {
-            return null;
-        }
-        if (position.equals(new HexPosition(-1, 0))) {
-            return activeResearch.puzzle().getFirst();
-        }
-        if (position.equals(new HexPosition(0, 0))) {
-            return activeResearch.puzzle().get(1);
-        }
-        if (position.equals(new HexPosition(1, 0))) {
-            return activeResearch.puzzle().getLast();
-        }
-        int index = HONEYCOMB.indexOf(position);
-        int aspectIndex = Math.floorMod(index * 7 + 3, Aspect.values().length);
-        return Aspect.values()[aspectIndex];
+        if (activeResearch == null) return null;
+        if (position.equals(START_CELL)) return activeResearch.puzzle().getFirst();
+        if (position.equals(END_CELL)) return activeResearch.puzzle().getLast();
+        return placedTiles.get(position);
     }
 
     private int[] hexPixel(HexPosition position) {

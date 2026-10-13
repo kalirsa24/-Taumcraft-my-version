@@ -80,6 +80,18 @@ public enum Aspect {
         }
         return null;
     }
+    /**
+     * Can two aspect tiles touch in a research link? They link when one is made
+     * from the other, or when they share a component. Two different primals never
+     * link directly - you must bridge them with a compound.
+     */
+    public boolean isLinkedTo(Aspect other) {
+        if (other == null || other == this) return false;
+        if (getComponents().contains(other) || other.getComponents().contains(this)) return true;
+        for (Aspect c : getComponents()) if (other.getComponents().contains(c)) return true;
+        return false;
+    }
+
     public List<Aspect> getComponents() {
         List<Aspect> list = new ArrayList<>();
         if (parentA != null) list.add(parentA);
