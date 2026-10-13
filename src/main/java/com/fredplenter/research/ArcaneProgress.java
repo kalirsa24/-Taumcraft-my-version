@@ -69,7 +69,9 @@ public final class ArcaneProgress extends SavedData {
         }
         for (AspectStack reward : rewards) {
             addPoints(state, reward.aspect(), reward.amount());
+            state.discoveredAspects.add(reward.aspect());
         }
+        ensurePrimals(state);
         setDirty();
         return true;
     }
@@ -82,7 +84,9 @@ public final class ArcaneProgress extends SavedData {
         }
         for (AspectStack reward : rewards) {
             addPoints(state, reward.aspect(), reward.amount());
+            state.discoveredAspects.add(reward.aspect());
         }
+        ensurePrimals(state);
         setDirty();
         return true;
     }
@@ -91,10 +95,39 @@ public final class ArcaneProgress extends SavedData {
         if (amount <= 0) {
             throw new IllegalArgumentException("Aspect points must be positive");
         }
-        addPoints(state(playerId), aspect, amount);
+        PlayerState s = state(playerId);
+        addPoints(s, aspect, amount);
+        s.discoveredAspects.add(aspect);
+        ensurePrimals(s);
         setDirty();
     }
 
+    public boolean hasDiscovered(UUID playerId, Aspect aspect) {
+        PlayerState s = state(playerId);
+        ensurePrimals(s);
+        return s.discoveredAspects.contains(aspect);
+    }
+    public Set<Aspect> getDiscovered(UUID playerId) {
+        PlayerState s = state(playerId);
+        ensurePrimals(s);
+        return Set.copyOf(s.discoveredAspects);
+    }
+    /** Spend 1+1 of two known aspects to create (and discover) their compound. */
+    public boolean combineAspects(UUID playerId, Aspect a, Aspect b) {
+        Aspect result = Aspect.combine(a, b);
+        if (result == null) return false;
+        PlayerState s = state(playerId);
+        ensurePrimals(s);
+        if (!s.discoveredAspects.contains(a) || !s.discoveredAspects.contains(b)) return false;
+        if (s.aspects.getOrDefault(a,0) < 1 || s.aspects.getOrDefault(b,0) < 1) return false;
+        addPoints(s, a, -1); addPoints(s, b, -1); addPoints(s, result, 1);
+        s.discoveredAspects.add(result);
+        setDirty();
+        return true;
+    }
+    private static void ensurePrimals(PlayerState s) {
+        for (Aspect a : Aspect.values()) if (a.isPrimal()) s.discoveredAspects.add(a);
+    }
     public boolean hasResearch(UUID playerId, ResourceLocation researchId) {
         return state(playerId).completedResearch.contains(researchId);
     }
@@ -109,17 +142,6 @@ public final class ArcaneProgress extends SavedData {
                 return false;
             }
         }
-        return true;
-    }
-
-    public boolean startResearch(ServerPlayer player, ResourceLocation researchId) {
-        Research research = ResearchRegistry.get(researchId);
-        if (research == null || research.method() != Research.Method.PAPER
-                || !canStartResearch(player.getUUID(), research)
-                || !hasItem(player.getInventory(), Items.PAPER)) {
-            return false;
-        }
-        consumeOne(player.getInventory(), Items.PAPER);
         return true;
     }
 
@@ -207,6 +229,7 @@ public final class ArcaneProgress extends SavedData {
         snapshot.put("CompletedResearch", stringList(state.completedResearch.stream().map(ResourceLocation::toString).toList()));
         snapshot.put("StudiedItems", stringList(state.studiedItems.stream().map(ResourceLocation::toString).toList()));
         snapshot.put("StudiedNodes", stringList(new ArrayList<>(state.studiedNodes)));
+        snapshot.put("DiscoveredAspects", stringList(getDiscovered(playerId).stream().map(Aspect::getId).toList()));
         return snapshot;
     }
 
@@ -274,6 +297,7 @@ public final class ArcaneProgress extends SavedData {
         private final Set<ResourceLocation> completedResearch = new HashSet<>();
         private final Set<ResourceLocation> studiedItems = new HashSet<>();
         private final Set<String> studiedNodes = new HashSet<>();
+        private final Set<Aspect> discoveredAspects = new HashSet<>();
 
         private CompoundTag save() {
             CompoundTag tag = new CompoundTag();
@@ -285,6 +309,7 @@ public final class ArcaneProgress extends SavedData {
             tag.put("CompletedResearch", stringList(completedResearch.stream().map(ResourceLocation::toString).toList()));
             tag.put("StudiedItems", stringList(studiedItems.stream().map(ResourceLocation::toString).toList()));
             tag.put("StudiedNodes", stringList(new ArrayList<>(studiedNodes)));
+            tag.put("DiscoveredAspects", stringList(discoveredAspects.stream().map(Aspect::getId).toList()));
             return tag;
         }
 
@@ -299,6 +324,9 @@ public final class ArcaneProgress extends SavedData {
             }
             readLocations(tag.getList("CompletedResearch", StringTag.TAG_STRING), state.completedResearch);
             readLocations(tag.getList("StudiedItems", StringTag.TAG_STRING), state.studiedItems);
+            ListTag disc = tag.getList("DiscoveredAspects", StringTag.TAG_STRING);
+            for (int i = 0; i < disc.size(); i++) { Aspect a = Aspect.byId(disc.getString(i)); if (a != null) state.discoveredAspects.add(a); }
+            ensurePrimals(state);
             ListTag nodes = tag.getList("StudiedNodes", StringTag.TAG_STRING);
             for (int i = 0; i < nodes.size(); i++) {
                 state.studiedNodes.add(nodes.getString(i));

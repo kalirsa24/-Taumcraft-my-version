@@ -1,6 +1,5 @@
 {
   "itemGroup.fredplenter.main": "Fredplenter",
-
   "item.fredplenter.arcane_codex": "Aspect Codex",
   "item.fredplenter.arcane_wand": "Resonance Wand",
   "item.fredplenter.aura_scanner": "Aura Scanner",
@@ -11,7 +10,6 @@
   "block.fredplenter.arcane_table": "Arcane Table",
   "block.fredplenter.arcane_table_extension": "Arcane Table",
   "block.fredplenter.aura_node": "Aura Node",
-
   "message.fredplenter.need_second_table": "Place this next to another crafting table to form an Arcane Table",
   "message.fredplenter.node_scanned": "Aura node studied",
   "message.fredplenter.already_studied": "Already studied",
@@ -27,11 +25,10 @@
   "message.fredplenter.inkwell_refilled": "The inkwell has been refilled.",
   "message.fredplenter.aspect_research_learned": "Learned for aspects: %s",
   "message.fredplenter.note_inserted": "Research note placed on the Arcane Table.",
-  "message.fredplenter.note_completed": "The link is complete. Take the note and right-click to study it.",
+  "message.fredplenter.note_completed": "Link complete. Take the note, open it with right-click and press Learn.",
   "message.fredplenter.note_needs_table": "Complete the aspect link on the Arcane Table first.",
   "message.fredplenter.research_learned": "Learned: %s",
   "message.fredplenter.note_unusable": "This note cannot be learned until its prerequisites are complete",
-
   "gui.fredplenter.learn": "Learn",
   "gui.fredplenter.learned": "Learned",
   "gui.fredplenter.begin": "Begin",
@@ -80,9 +77,9 @@
   "gui.fredplenter.table_help_purpose": "Purpose:",
   "gui.fredplenter.table_help_purpose_desc": "Solve a note to learn its research topic.",
   "gui.fredplenter.table_help_get": "Get a note:",
-  "gui.fredplenter.table_help_get_desc": "Start Codex research with paper, scribing tools, and ink.",
+  "gui.fredplenter.table_help_get_desc": "Start research in the Codex with paper and an inkwell, bring the note here. Compound aspects: scan items, or combine two aspects on the left.",
   "gui.fredplenter.table_help_solve": "Solve it:",
-  "gui.fredplenter.table_help_solve_desc": "Click the start, required aspect, and end using adjacent cells.",
+  "gui.fredplenter.table_help_solve_desc": "Click the start, required middle and end through neighbouring cells. Two aspects on the left can be combined into a compound.",
   "gui.fredplenter.no_research_available": "No research is available yet.",
   "tooltip.fredplenter.studied": "Studied!",
   "tooltip.fredplenter.unstudyable": "Unstudyable!",
@@ -98,10 +95,9 @@
   "tooltip.fredplenter.inkwell_ink": "Ink: %s/%s",
   "tooltip.fredplenter.inkwell_refill": "Right-click with an ink sac in your other hand to refill.",
   "tooltip.fredplenter.note_unfinished": "Unfinished: place on the Arcane Table and connect the aspects.",
-  "tooltip.fredplenter.note_ready": "Complete: right-click to learn this research.",
+  "tooltip.fredplenter.note_ready": "Complete: right-click opens the note - press Learn inside it.",
   "tooltip.fredplenter.cache_help": "Single-use item: right-click to add 100 points of every aspect.",
   "tooltip.fredplenter.scribing_tools_help": "Optional item. Craft from a feather and ink sac.",
-
   "aspect.fredplenter.flamma": "Flamma",
   "aspect.fredplenter.unda": "Unda",
   "aspect.fredplenter.humus": "Humus",
@@ -118,7 +114,6 @@
   "aspect.fredplenter.mors": "Mors",
   "aspect.fredplenter.somnus": "Somnus",
   "aspect.fredplenter.motus": "Motus",
-
   "research.fredplenter.basic_observation.title": "First Observations",
   "research.fredplenter.basic_observation.desc": "Study objects and record the aspects you find.",
   "research.fredplenter.aura_survey.title": "Aura Survey",
@@ -128,5 +123,14 @@
   "research.fredplenter.aspect_almanac.title": "Aspect Almanac",
   "research.fredplenter.aspect_almanac.desc": "Organize observations about primal and compound aspects.",
   "research.fredplenter.resonant_work.title": "Resonant Work",
-  "research.fredplenter.resonant_work.desc": "Combine knowledge of aspects, nodes, and the wand."
+  "research.fredplenter.resonant_work.desc": "Combine knowledge of aspects, nodes, and the wand.",
+  "gui.fredplenter.combine_aspects": "Combine",
+  "gui.fredplenter.combine_hint_1": "Aspect combiner: click two aspects on the left,",
+  "gui.fredplenter.combine_hint_2": "then press Combine (costs 1 + 1, gives 1 compound).",
+  "gui.fredplenter.aspect_recipe": "Made from %s + %s (combine at the Arcane Table)",
+  "gui.fredplenter.note_unknown": "Unknown research note",
+  "gui.fredplenter.note_howto": "Put this note in the Arcane Table note slot, press Begin, and link the three aspects through neighbouring hexes.",
+  "gui.fredplenter.note_press_begin": "Press Begin below to solve this note here - no research map inside the table.",
+  "message.fredplenter.aspect_combined": "Combined into: %s",
+  "message.fredplenter.aspect_combine_failed": "Cannot combine those (need two different known aspects, 1 point each, and an existing recipe)."
 }

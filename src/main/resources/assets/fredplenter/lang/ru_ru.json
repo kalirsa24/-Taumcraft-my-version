@@ -1,6 +1,5 @@
 {
   "itemGroup.fredplenter.main": "Fredplenter",
-
   "item.fredplenter.arcane_codex": "Кодекс аспектов",
   "item.fredplenter.arcane_wand": "Посох резонанса",
   "item.fredplenter.aura_scanner": "Аураскоп",
@@ -11,7 +10,6 @@
   "block.fredplenter.arcane_table": "Тайный стол",
   "block.fredplenter.arcane_table_extension": "Тайный стол",
   "block.fredplenter.aura_node": "Узел ауры",
-
   "message.fredplenter.need_second_table": "Поставьте рядом ещё один верстак, чтобы собрать Тайный стол",
   "message.fredplenter.node_scanned": "Узел ауры изучен",
   "message.fredplenter.already_studied": "Уже изучено",
@@ -27,11 +25,10 @@
   "message.fredplenter.inkwell_refilled": "Чернильница пополнена.",
   "message.fredplenter.aspect_research_learned": "Изучено за аспекты: %s",
   "message.fredplenter.note_inserted": "Запись помещена на Тайный стол.",
-  "message.fredplenter.note_completed": "Связь готова. Заберите запись и изучите её ПКМ.",
+  "message.fredplenter.note_completed": "Связь готова. Заберите запись, откройте её ПКМ и нажмите «Изучить».",
   "message.fredplenter.note_needs_table": "Сначала завершите связь аспектов на Тайном столе.",
   "message.fredplenter.research_learned": "Изучено: %s",
   "message.fredplenter.note_unusable": "Эту запись нельзя изучить: сначала выполните необходимые исследования",
-
   "gui.fredplenter.learn": "Изучить",
   "gui.fredplenter.learned": "Изучено",
   "gui.fredplenter.begin": "Начать",
@@ -80,9 +77,9 @@
   "gui.fredplenter.table_help_purpose": "Назначение:",
   "gui.fredplenter.table_help_purpose_desc": "Решите записку, чтобы изучить тему.",
   "gui.fredplenter.table_help_get": "Где взять:",
-  "gui.fredplenter.table_help_get_desc": "Начните исследование в Кодексе с бумагой, инструментами писца и чернилами.",
+  "gui.fredplenter.table_help_get_desc": "Начните исследование в Кодексе с бумагой и чернильницей, принесите запись сюда. Составные аспекты: сканируйте предметы или объединяйте два аспекта слева.",
   "gui.fredplenter.table_help_solve": "Как решить:",
-  "gui.fredplenter.table_help_solve_desc": "Нажмите начало, нужный аспект и конец по соседним клеткам.",
+  "gui.fredplenter.table_help_solve_desc": "Нажмите начало, нужный аспект и конец по соседним клеткам. Два аспекта слева можно объединить в составной.",
   "gui.fredplenter.no_research_available": "Пока нет доступных исследований.",
   "tooltip.fredplenter.studied": "Изучено!",
   "tooltip.fredplenter.unstudyable": "Неизучаемое!",
@@ -98,10 +95,9 @@
   "tooltip.fredplenter.inkwell_ink": "Чернила: %s/%s",
   "tooltip.fredplenter.inkwell_refill": "ПКМ с мешком чернил в другой руке, чтобы наполнить.",
   "tooltip.fredplenter.note_unfinished": "Незавершено: положите запись в Тайный стол и свяжите аспекты.",
-  "tooltip.fredplenter.note_ready": "Готово: используйте ПКМ, чтобы изучить исследование.",
+  "tooltip.fredplenter.note_ready": "Готово: ПКМ открывает запись — нажми «Изучить» в ней.",
   "tooltip.fredplenter.cache_help": "Одноразовый предмет: ПКМ добавляет 100 очков каждого аспекта.",
   "tooltip.fredplenter.scribing_tools_help": "Необязательный предмет. Крафт: перо + чернильный мешок.",
-
   "aspect.fredplenter.flamma": "Фламма (Огонь)",
   "aspect.fredplenter.unda": "Унда (Вода)",
   "aspect.fredplenter.humus": "Хумус (Земля)",
@@ -118,7 +114,6 @@
   "aspect.fredplenter.mors": "Морс (Смерть)",
   "aspect.fredplenter.somnus": "Сомнус (Сон)",
   "aspect.fredplenter.motus": "Мотус (Движение)",
-
   "research.fredplenter.basic_observation.title": "Первые наблюдения",
   "research.fredplenter.basic_observation.desc": "Изучайте предметы и записывайте найденные аспекты.",
   "research.fredplenter.aura_survey.title": "Исследование ауры",
@@ -128,5 +123,14 @@
   "research.fredplenter.aspect_almanac.title": "Альманах аспектов",
   "research.fredplenter.aspect_almanac.desc": "Систематизируйте наблюдения за первичными и составными аспектами.",
   "research.fredplenter.resonant_work.title": "Резонансная работа",
-  "research.fredplenter.resonant_work.desc": "Объедините знания об аспектах, узлах и посохе."
+  "research.fredplenter.resonant_work.desc": "Объедините знания об аспектах, узлах и посохе.",
+  "gui.fredplenter.combine_aspects": "Объединить",
+  "gui.fredplenter.combine_hint_1": "Объединение аспектов: кликни два аспекта слева,",
+  "gui.fredplenter.combine_hint_2": "потом нажми «Объединить» (тратит 1 + 1, даёт 1 составной).",
+  "gui.fredplenter.aspect_recipe": "Состоит из %s + %s (объединяется на Тайном столе)",
+  "gui.fredplenter.note_unknown": "Неизвестная запись исследования",
+  "gui.fredplenter.note_howto": "Положи эту запись в слот записки Тайного стола, нажми «Начать» и свяжи три аспекта через соседние шестиугольники.",
+  "gui.fredplenter.note_press_begin": "Нажми «Начать» ниже, чтобы решить именно эту запись здесь — без карты исследований внутри стола.",
+  "message.fredplenter.aspect_combined": "Объединено в: %s",
+  "message.fredplenter.aspect_combine_failed": "Не объединяется (нужны два разных открытых аспекта, по 1 очку, и существующий рецепт)."
 }

@@ -1,12 +1,9 @@
 package com.fredplenter.item;
 
-import com.fredplenter.network.NetworkHandler;
-import com.fredplenter.research.ArcaneProgress;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
@@ -65,23 +62,10 @@ public class ResearchNoteItem extends Item {
 
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
-        ItemStack stack = player.getItemInHand(hand);
-        if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
-            ResourceLocation researchId = researchId(stack);
-            if (!isComplete(stack)) {
-                player.displayClientMessage(Component.translatable("message.fredplenter.note_needs_table"), true);
-            } else if (researchId != null
-                    && ArcaneProgress.get(serverPlayer).learnFromNote(player.getUUID(), researchId)) {
-                stack.shrink(1);
-                player.displayClientMessage(
-                        Component.translatable("message.fredplenter.research_learned",
-                                Component.translatable("research." + researchId.getNamespace() + "." + researchId.getPath() + ".title")),
-                        true);
-                NetworkHandler.sendProgress(serverPlayer);
-            } else {
-                player.displayClientMessage(Component.translatable("message.fredplenter.note_unusable"), true);
-            }
-        }
-        return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
+        // Deliberately no learning and no screen here: on the client ClientHooks opens
+        // ResearchNoteScreen, learning happens only via LearnNotePayload after the
+        // player presses the button in that screen. (Previously a right-click could
+        // consume/learn instantly and any screen looked like the Codex map.)
+        return InteractionResultHolder.sidedSuccess(player.getItemInHand(hand), level.isClientSide);
     }
 }

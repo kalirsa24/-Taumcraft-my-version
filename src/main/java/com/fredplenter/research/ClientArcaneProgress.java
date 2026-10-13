@@ -16,6 +16,7 @@ public final class ClientArcaneProgress {
     private static final EnumMap<Aspect, Integer> ASPECTS = new EnumMap<>(Aspect.class);
     private static final Set<ResourceLocation> COMPLETED = new HashSet<>();
     private static final Set<ResourceLocation> STUDIED_ITEMS = new HashSet<>();
+    private static final java.util.EnumSet<Aspect> DISCOVERED = java.util.EnumSet.noneOf(Aspect.class);
     private static ResourceLocation lastResearchResultId;
     private static boolean lastResearchResultSucceeded;
     private static ResourceLocation lastResearchStartId;
@@ -29,6 +30,7 @@ public final class ClientArcaneProgress {
         ASPECTS.clear();
         COMPLETED.clear();
         STUDIED_ITEMS.clear();
+        DISCOVERED.clear();
 
         CompoundTag aspects = tag.getCompound("Aspects");
         for (Aspect aspect : Aspect.values()) {
@@ -39,6 +41,9 @@ public final class ClientArcaneProgress {
         }
         readLocations(tag.getList("CompletedResearch", StringTag.TAG_STRING), COMPLETED);
         readLocations(tag.getList("StudiedItems", StringTag.TAG_STRING), STUDIED_ITEMS);
+        ListTag disc = tag.getList("DiscoveredAspects", StringTag.TAG_STRING);
+        for (int i = 0; i < disc.size(); i++) { Aspect a = Aspect.byId(disc.getString(i)); if (a != null) DISCOVERED.add(a); }
+        for (Aspect a : Aspect.values()) if (a.isPrimal()) DISCOVERED.add(a);
         revision++;
     }
 
@@ -58,6 +63,8 @@ public final class ClientArcaneProgress {
         return Set.copyOf(COMPLETED);
     }
 
+    public static boolean hasDiscovered(Aspect a) { return DISCOVERED.contains(a); }
+    public static Set<Aspect> getDiscovered() { return Set.copyOf(DISCOVERED); }
     public static boolean hasStudiedItem(ResourceLocation id) {
         return STUDIED_ITEMS.contains(id);
     }

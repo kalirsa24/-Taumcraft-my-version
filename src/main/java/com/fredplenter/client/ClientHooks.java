@@ -2,6 +2,8 @@ package com.fredplenter.client;
 
 import com.fredplenter.Fredplenter;
 import com.fredplenter.client.screen.ArcaneCodexScreen;
+import com.fredplenter.client.screen.ResearchNoteScreen;
+import com.fredplenter.item.ResearchNoteItem;
 import com.fredplenter.network.RequestProgressPayload;
 import com.fredplenter.registry.ModItems;
 import net.minecraft.client.Minecraft;
@@ -24,8 +26,16 @@ public final class ClientHooks {
 
     @SubscribeEvent
     public static void onRightClickItem(PlayerInteractEvent.RightClickItem event) {
-        if (event.getItemStack().is(ModItems.ARCANE_CODEX.get())) {
+        var stack = event.getItemStack();
+        if (stack.is(ModItems.ARCANE_CODEX.get())) {
             Minecraft.getInstance().execute(ClientHooks::openCodex);
+        } else if (stack.is(ModItems.RESEARCH_NOTE.get())) {
+            // A note opens its own parchment screen - never the Codex map.
+            var id = ResearchNoteItem.researchId(stack);
+            boolean complete = ResearchNoteItem.isComplete(stack);
+            if (id != null) {
+                Minecraft.getInstance().execute(() -> Minecraft.getInstance().setScreen(new ResearchNoteScreen(id, complete)));
+            }
         }
     }
 }

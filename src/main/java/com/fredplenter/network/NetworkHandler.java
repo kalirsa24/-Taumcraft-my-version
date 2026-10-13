@@ -43,6 +43,14 @@ public final class NetworkHandler {
                 ResearchStartResultPayload.STREAM_CODEC,
                 ResearchStartResultPayload::handle);
         registrar.playToServer(
+                CombineAspectsPayload.TYPE,
+                CombineAspectsPayload.STREAM_CODEC,
+                CombineAspectsPayload::handle);
+        registrar.playToServer(
+                LearnNotePayload.TYPE,
+                LearnNotePayload.STREAM_CODEC,
+                LearnNotePayload::handle);
+        registrar.playToServer(
                 ScanItemPayload.TYPE,
                 ScanItemPayload.STREAM_CODEC,
                 ScanItemPayload::handle);

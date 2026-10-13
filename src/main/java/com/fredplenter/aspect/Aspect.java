@@ -68,6 +68,18 @@ public enum Aspect {
         return parentA == null && parentB == null;
     }
 
+    public static Aspect byId(String id) {
+        for (Aspect a : values()) if (a.id.equals(id)) return a;
+        return null;
+    }
+    /** The compound made from a+b (order-independent), or null if none exists. */
+    public static Aspect combine(Aspect a, Aspect b) {
+        if (a == null || b == null || a == b) return null;
+        for (Aspect c : values()) {
+            if (c.parentA != null && ((c.parentA == a && c.parentB == b) || (c.parentA == b && c.parentB == a))) return c;
+        }
+        return null;
+    }
     public List<Aspect> getComponents() {
         List<Aspect> list = new ArrayList<>();
         if (parentA != null) list.add(parentA);
