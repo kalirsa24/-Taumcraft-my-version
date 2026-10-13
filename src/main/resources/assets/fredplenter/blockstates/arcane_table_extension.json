@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "fredplenter:block/arcane_table_extension" },
+    "facing=south": { "model": "fredplenter:block/arcane_table_extension", "y": 180 },
+    "facing=west":  { "model": "fredplenter:block/arcane_table_extension", "y": 270 },
+    "facing=east":  { "model": "fredplenter:block/arcane_table_extension", "y": 90 }
+  }
+}
