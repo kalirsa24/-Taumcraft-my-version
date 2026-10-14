@@ -12,6 +12,7 @@ This README is both the player guide and a technical map of the current implemen
 - [How aspect crafting works internally](#how-aspect-crafting-works-internally)
 - [Arcane Table layout and controls](#arcane-table-layout-and-controls)
 - [Research, notes, and the Codex](#research-notes-and-the-codex)
+- [Professional bonus branches](#professional-bonus-branches)
 - [Scanning, aura nodes, and the wand](#scanning-aura-nodes-and-the-wand)
 - [Saved progress and multiplayer](#saved-progress-and-multiplayer)
 - [Code map](#code-map)
@@ -32,7 +33,7 @@ This README is both the player guide and a technical map of the current implemen
 | Aspect count | 16: six primal and ten compound |
 | Compound recipes | One shared in-code recipe catalogue |
 | Aspect point maximum | 1,000,000 per aspect per player |
-| Research nodes | 14 definitions in `ResearchRegistry` |
+| Research nodes | 32 definitions in `ResearchRegistry` (17 original + 15 bonus nodes) |
 | Languages shipped | English (`en_us`) and Russian (`ru_ru`) |
 | Server authority | Aspect creation, scanning rewards, note completion, and research progress are validated server-side |
 | Extra runtime libraries | None declared in `build.gradle` beyond Minecraft/NeoForge-provided APIs |
@@ -52,6 +53,12 @@ The map shows research nodes and their prerequisites. Select a node to inspect i
 Hold an Aura Scanner or Resonance Wand in the main hand and hover over a vanilla item in an open inventory or container for about two seconds. That item type can reward aspects once per player. The Scanner can also study an Aura Node by using it on the node block.
 
 The Resonance Wand can draw primal vis from an Aura Node. Stored wand vis and research aspect points are related to the same aspect vocabulary, but they are different storage systems: wand charges live on that wand item, while research points belong to the player's world-saved research state.
+
+Using the Aura Scanner on a node also displays the vis types and amounts still stored in that node. The Resonance Wand casts its selected spell with right-click away from a node; hold Shift and right-click to cycle through spells unlocked by Codex research. A cast spends its vis only when its effect succeeds.
+
+The Wand spells are unlocked through *Focal Casting*, *Verdant Weaving*, and *Dread Weaving*. Gust pushes nearby creatures in front of you; Pyre sets the aimed creature on fire; Tide slows and extinguishes it; Radiance heals you and grants regeneration; Verdure accelerates nearby plants; Dread weakens and blinds the aimed creature. The Wand tooltip shows the selected spell and its vis cost.
+
+Hold Shift and right-click a vanilla block with the Aura Scanner to study its block type once; blocks and items share the same studied list. Without Shift, block interactions such as opening a chest continue normally. Scans announce newly discovered aspects in chat, and the Codex research tooltip lists spells unlocked by each research. Aura Nodes also emit occasional colored motes and a soft chime.
 
 ### 3. Create a research note
 
@@ -228,11 +235,56 @@ The map positions below are normalized values in the Codex definition (`x`, `y`)
 | `wand_attunement` | Aspects | `aura_survey` | 3 Flatus + 3 Motus + 3 Lux | Flatus → Motus → Lux |
 | `wand_capacity` | Aspects | `wand_attunement` | 4 Pulvis + 4 Humus | Humus → Pulvis → Flatus |
 | `deep_resonance` | Paper | `wand_capacity`, `node_attunement` | — | Flamma → Aestus → Lux |
+| `focal_casting` | Aspects | `wand_attunement` | 2 Flatus + 2 Lux + 2 Motus | Flatus → Flamma → Lux |
+| `verdant_weaving` | Aspects | `focal_casting` | 3 Humus + 2 Pulvis | Humus → Pulvis → Vita |
+| `dread_weaving` | Aspects | `focal_casting` | 3 Tenebrae + 2 Mors | Tenebrae → Mors → Somnus |
 | `resonant_work` | Aspects | `wand_attunement`, `aspect_almanac` | 4 Tenebrae + 4 Somnus + 4 Flatus | Tenebrae → Somnus → Flatus |
 | `ink_and_paper` | Paper | `careful_scribing` | — | Unda → Limus → Humus |
 | `table_mastery` | Aspects | `ink_and_paper`, `resonant_work` | 5 Cinis + 5 Motus | Flamma → Cinis → Humus |
 
 The exact canonical values are in the static registrations in `ResearchRegistry.java`. This table is an explanatory copy: when adding or changing research, update the Java registration and the matching language entries as well.
+
+## Professional bonus branches
+
+The profession bonuses do **not** add tabs to the Codex. The Codex keeps its original `all`, `foundations`, `aura`, `wand`, and `craft` categories. Each bonus branch is attached to a corresponding original branch and is positioned below or beside its existing nodes. Bonus research uses the existing `PAPER` method: start it in the Codex, solve its note at the Arcane Table, take the finished note, then use **Learn**. A bonus is active only after that last server-validated step.
+
+Research ids are stable save-data identifiers. Existing ids and the `SavedData` format are unchanged. The 15 added definitions are:
+
+| Original Codex branch | Bonus research and prerequisite chain | Effect after learning | Implementation boundary |
+|---|---|---|---|
+| **Foundations** | `fisher_catch`, after `aspect_mixture` | On a successful fishing-rod catch, a 10% chance duplicates every non-empty item stack in that catch's loot result. | Only vanilla's `minecraft:gameplay/fishing` loot table is targeted. The bonus is personal to the player who owns the fishing hook. |
+| **Aura** | `miner_luck_10` after `node_attunement`; then `miner_luck_15` → `_20` → `_25` → `_30` → `_35` → `_40` | A personally mined ore block has a 10%, 15%, 20%, 25%, 30%, 35%, or 40% chance, according to the highest learned tier, to yield one extra resource item. Higher tiers replace lower tiers; they do not stack. | Requires a server-player breaker and a block in NeoForge's common `c:ores` tag. Silk Touch and creative players do not get the bonus. It duplicates one matching resource drop, not the ore block or an entire Fortune-modified stack. |
+| **Aura** | `miner_haste`, after `miner_luck_25` (a separate fork; it does not require levels 30–40) | The researcher's block-breaking speed is multiplied by 1.25. | The server checks saved progress; the client-side event mirrors the learned state so the break-speed display and interaction remain responsive. |
+| **Wand** | `warrior_instinct` after `deep_resonance` → `warrior_fury` → `warrior_guard` | Instinct: +25% dropped mob experience credited to the player. Fury: +30% damage dealt by the player to mobs. Guard: −20% incoming damage to the researcher. | These are personal research effects. Damage bonuses are applied on the server; damage to another player is not boosted. Experience applies to mobs with an attacking player recorded. |
+| **Craft** | `create_schematics` after `table_mastery` → `create_precision` → `create_cache` | Schematics: gain Motus points when manually crafting Create items. Precision: a 10% chance to return one andesite alloy when manually crafting a Create item using the alloy. Cache: when wearing Create goggles, personally mined Create-block drops are moved into the inventory where space permits. | The Create integration is optional. Its branch is unavailable without the `create` mod; no required-mod entry is added. Machine-driven work without a player attribution does not receive the personal bonuses. |
+
+Research map coordinates are normalized against the available screen area: lower `y` values render higher, larger values render lower. The new branch endpoints are deliberately placed in the lower region of each original category: Fisher at `(0.84, 0.84)`, the Mining sequence across `(0.12–0.78, 0.68–0.86)`, the Warrior chain at `x=0.90` and `y=0.90–0.99`, and the Create chain at the bottom of Craft (`y=0.90–0.99`). These values are in `ResearchRegistry`; they are not absolute pixels.
+
+### Why each bonus is an extension rather than a new tab
+
+- **Foundations** holds the fishing bonus after the existing `aspect_mixture` milestone.
+- **Aura** holds ore expertise and its independent haste fork after the existing node-attunement milestone. The seven ore tiers form a linear chain; haste branches from tier 25, as defined by the prerequisite graph.
+- **Wand** holds the warrior path after the existing `deep_resonance` milestone.
+- **Craft** holds the optional Create path after `table_mastery`.
+- The research `category` field remains one of the four original research categories. That means the existing category filter displays the new node in its parent branch, and the Arcane Table's map uses the inserted note's original category rather than inventing a second profession-only map.
+
+### Source-level flow for bonuses
+
+1. `ResearchRegistry` defines each bonus id, parent category, prerequisite ids, puzzle aspects, and normalized map position. `Research` remains the common immutable record for original and bonus nodes.
+2. `ArcaneProgress.beginCodexResearch` creates the normal paper note. There is no bonus-only note item, alternate progression store, or new save migration.
+3. `ArcaneTableMenu` and `ArcaneProgress.completeResearch` validate the normal note and aspect-link puzzle. `LearnNotePayload` then asks the server to learn the completed note; `learnFromNote` accepts only `PAPER` research and `ResearchRegistry.isAvailable` checks prerequisites.
+4. `ResearchBonuses` reads the researcher's saved completed-id set when the relevant NeoForge gameplay event occurs. It does not grant a persistent potion effect or alter other players' saved progress.
+5. Fishing is handled by `FisherCatchModifier`: its data definition restricts it to the fishing loot-table id, and its codec is registered by `ModLootModifiers`.
+6. Mining, combat, manual crafting, and Create-block collection use NeoForge events in `ResearchBonuses`. Create-specific handlers additionally check that Create is loaded, and the research availability check prevents learning Create nodes on a server without Create.
+
+### Bonus-effect limits and compatibility notes
+
+- Mining's extra item must be one of the resource outputs recognized by the implementation (common raw-material, gem, or dust tags, plus vanilla coal, gold nuggets, and netherite scrap). If a mod's ore or output is not tagged accordingly, the bonus intentionally does not guess which drop should be copied.
+- The ore bonus uses a single random check per `BlockDropsEvent`, then copies at most one eligible item. It does not increase the number of ore blocks, duplicate every Fortune drop, or operate on an automation event with no `ServerPlayer` breaker.
+- Fishing duplicates the complete non-empty catch list, including multiple different loot entries, rather than adding a hard-coded fish. Empty fishing results are left unchanged.
+- The Create cache requires the player to wear the Create goggles item in the head slot. Items which fit go into the player's inventory; any remainder stays as a normal dropped item. Creative breaking and non-player breaking are excluded.
+- Create crafting bonuses apply to manually crafted outputs whose item namespace is `create`. Create machines, presses, and other automated processing do not have a player attached to this event and are therefore not credited.
+- The Create mod is not a required dependency for Fredplenter. Installing or removing it does not rename research ids or modify existing player save data; only the Create-specific branch/effects are gated.
 
 ### Paper-method research lifecycle
 
@@ -287,9 +339,11 @@ The server does not trust a client claim that it scanned something. `ScanItemPay
 
 `VanillaAspectMap.aspectsFor` uses an ordered set of explicit vanilla item paths and stable one-point rewards, plus fixed overrides for special cases such as lava buckets, water buckets, and bowls. Unmatched vanilla items use a stable fallback; non-vanilla ids receive no mapping. This is a lightweight playable mapping, not a curated compatibility database.
 
+With the Aura Scanner, Shift + right-click a vanilla block to study its block id using the same mapping and per-player studied list as item scans. This action is server-validated by the held scanner; non-vanilla blocks are reported as unstudyable. Normal block use is preserved when Shift is not held.
+
 ### Aura nodes and the Aura Scanner
 
-Aura nodes are block entities with their own persistent `Vis` compound and initialization flag. On server ticks they initialize a deterministic selection of primal vis amounts from the node position and regenerate vis periodically, up to 24 per primal type. `getScanAspects` returns the node's present aspect types as research rewards.
+Aura nodes are block entities with their own persistent `Vis` compound and initialization flag. On server ticks they initialize a deterministic selection of primal vis amounts from the node position and regenerate vis periodically, up to 24 per primal type. `getScanAspects` returns only aspects with remaining vis as research rewards. Using the Aura Scanner on a node also reports the remaining aspect names and amounts, plus the dominant aspect, in chat. Client-side ambient particles use primal aspect colors and occasionally play a quiet chime; this cosmetic effect does not change node vis.
 
 Using the Aura Scanner on a node calls `ArcaneProgress.markNodeStudied` with dimension id and packed block position. This creates a per-player unique node key, so a player cannot repeatedly claim the same node scan. Scanning is server-side and the client receives a progress update on success.
 
@@ -299,7 +353,7 @@ The node block's generation configuration is under `src/main/resources/data/fred
 
 ### Resonance Wand
 
-The Wand transfers primal vis from the clicked Aura Node into the held wand, up to 100 units of each primal aspect (600 total). Stored values are custom item data and therefore travel with the item. The node is debited by `AuraNodeBlockEntity.extract`; wand and node data are updated on the server. The client tooltip shows total capacity, average fill, and scanning hints; the client tooltip handler can list the individual stored primal charges while Shift is held.
+The Wand transfers primal vis from the clicked Aura Node into the held wand, up to 100 units of each primal aspect (600 total). Stored values are custom item data and therefore travel with the item. The node is debited by `AuraNodeBlockEntity.extract`; wand and node data are updated on the server. Right-click away from a node casts the selected learned spell, while Shift + right-click cycles through learned spells. Each cast costs its listed primal vis and only spends it if a valid effect occurs. The tooltip shows the selected spell and its cost; the client tooltip handler can list the individual stored primal charges while Shift is held.
 
 The wand has three vanilla-resource crafting recipes: the standard, amethyst/copper, and quartz/blaze-powder variants. Their data files are `arcane_wand.json`, `arcane_wand_amethyst.json`, and `arcane_wand_quartz.json`.
 
@@ -359,17 +413,23 @@ Paths below are relative to this repository. Names in the “main responsibiliti
 | `src/main/java/com/fredplenter/aspect/VanillaAspectMap.java` | Resource-location adapter for the explicit vanilla-item scan rules. |
 | `src/main/java/com/fredplenter/aspect/VanillaAspectRules.java` | Ordered vanilla scan rules, explicit item overrides, and stable aspect amounts. |
 | `src/main/java/com/fredplenter/research/Research.java` | Immutable research data: prerequisites, costs, method, puzzle, category, and normalized Codex position. |
-| `src/main/java/com/fredplenter/research/ResearchRegistry.java` | All 14 research definitions and shared lookup/availability logic. |
+| `src/main/java/com/fredplenter/research/ResearchRegistry.java` | All 32 original and bonus research definitions, parent-branch membership, prerequisite lookup, and optional-Create availability gating. |
+| `src/main/java/com/fredplenter/gameplay/ResearchBonuses.java` | Server-authoritative miner, warrior, and Create event handlers; highest learned ore-luck tier lookup; client break-speed mirror; Create-mod presence gates. |
+| `src/main/java/com/fredplenter/loot/FisherCatchModifier.java` | Global loot modifier that duplicates successful fishing loot for a player who has learned `fisher_catch`. |
+| `src/main/java/com/fredplenter/registry/ModLootModifiers.java` | Deferred registry for the fishing loot-modifier codec. |
+| `src/main/java/com/fredplenter/spell/Spell.java` | Spell ids, primal vis costs, research unlocks, and selection order. |
+| `src/main/java/com/fredplenter/spell/SpellEffects.java` | Server-side targeting and effects for Wand spells. |
 | `src/main/java/com/fredplenter/research/HexPosition.java` | Hex axial-coordinate adjacency and legal-board bounds. |
 | `src/main/java/com/fredplenter/research/ArcaneProgress.java` | Authoritative per-world/per-player SavedData, discovery, points, research completion, scans, puzzle validation, and aspect creation. |
+| `src/main/java/com/fredplenter/network/ScanItemPayload.java` | Server-validates item scans and announces aspects newly discovered from scan rewards. |
 | `src/main/java/com/fredplenter/research/ClientArcaneProgress.java` | Client-only progress snapshot/cache and revision tracking for GUI refresh. |
 
 ### Client screens and interaction
 
 | File | Main responsibilities |
 |---|---|
-| `src/main/java/com/fredplenter/client/screen/ArcaneCodexScreen.java` | Cosmic research map, categories, search, selected research details, and Codex research request. |
-| `src/main/java/com/fredplenter/client/screen/ArcaneTableScreen.java` | 360×410 table screen, aspect sidebar, recipe grid, recipe hit-testing, tooltips, create button, hex puzzle, map, FAQ navigation, and screen-side message requests. |
+| `src/main/java/com/fredplenter/client/screen/ArcaneCodexScreen.java` | Cosmic research map, categories, search, selected research details, spell unlock hints, and Codex research request. |
+| `src/main/java/com/fredplenter/client/screen/ArcaneTableScreen.java` | 360×410 table screen, aspect sidebar, recipe grid, recipe hit-testing, tooltips, inventory slot frames, create button, hex puzzle, map, FAQ navigation, and screen-side message requests. |
 | `src/main/java/com/fredplenter/client/screen/ArcaneTableFaqScreen.java` | Scrollable translated FAQ, clipping/scrollbar, and generated example path illustration. |
 | `src/main/java/com/fredplenter/client/screen/ResearchNoteScreen.java` | Note details, route summary, learned/unfinished state, and Learn/Back actions. |
 | `src/main/java/com/fredplenter/client/ClientHooks.java` | Opens the Codex screen and right-clicked research-note screen; asks the server for a fresh progress snapshot. |
@@ -383,12 +443,12 @@ Paths below are relative to this repository. Names in the “main responsibiliti
 |---|---|
 | `src/main/java/com/fredplenter/block/ArcaneTableBlock.java` | Main table half; opens menu, sends current progress, and drops stored contents when removed. |
 | `src/main/java/com/fredplenter/block/ArcaneTableExtensionBlock.java` | Decorative second half and paired-block behavior. |
-| `src/main/java/com/fredplenter/block/AuraNodeBlock.java` | Aura Node interaction, block entity ticking, light, and world representation. |
+| `src/main/java/com/fredplenter/block/AuraNodeBlock.java` | Aura Node interaction, client ambient particles/sound, block entity ticking, light, and world representation. |
 | `src/main/java/com/fredplenter/block/entity/ArcaneTableBlockEntity.java` | Persistent one-slot table inventory and link to the extension half. |
 | `src/main/java/com/fredplenter/block/entity/AuraNodeBlockEntity.java` | Per-node primal vis storage, initialization, extraction, regeneration, scan rewards, and NBT persistence. |
 | `src/main/java/com/fredplenter/item/ArcaneCodexItem.java` | Forms an Arcane Table by using the Codex on two adjacent crafting tables, with permissions and placement-event checks. |
-| `src/main/java/com/fredplenter/item/ArcaneWandItem.java` | Transfers primal vis from nodes into item custom data and shows capacity/status tooltips. |
-| `src/main/java/com/fredplenter/item/AuraScannerItem.java` | Scans aura-node block entities and awards their aspects once per player/node. |
+| `src/main/java/com/fredplenter/item/ArcaneWandItem.java` | Transfers primal vis, selects/casts unlocked spells, drains spell costs, and shows Wand tooltips. |
+| `src/main/java/com/fredplenter/item/AuraScannerItem.java` | Scans aura nodes and Shift-targeted vanilla blocks, reports node vis, and awards aspects once per player/target. |
 | `src/main/java/com/fredplenter/item/ResearchNoteItem.java` | Stores research id and completion flag in item custom data; exposes translated tooltip details. |
 | `src/main/java/com/fredplenter/item/InkwellItem.java` | Eight-charge ink storage, refill action, ink checks/consumption, and tooltip. |
 | `src/main/java/com/fredplenter/item/ScribingToolsItem.java` | Optional writing-tool item and tooltip. |
@@ -424,6 +484,8 @@ Paths below are relative to this repository. Names in the “main responsibiliti
 | `src/main/resources/data/fredplenter/worldgen/` | Configured and placed Aura Node world-generation features. |
 | `src/main/resources/data/fredplenter/neoforge/biome_modifier/` | Biome modifier that adds Aura Node generation. |
 | `src/main/resources/data/fredplenter/loot_table/blocks/` | Arcane Table and Aura Node loot definitions. |
+| `src/main/resources/data/fredplenter/loot_modifiers/fisher_catch.json` | Conditions for applying the Fisher bonus only to the vanilla fishing loot table. |
+| `src/main/resources/data/neoforge/loot_modifiers/global_loot_modifiers.json` | Registers the mod's fishing loot modifier with `replace: false`, preserving other global modifiers. |
 
 ## Recent implementation changes
 
@@ -481,6 +543,16 @@ This section records the changes that were made to implement the latest written 
 - Existing `SavedData` without a `DiscoveredAspects` list is migrated by inferring discovery from positive saved aspect balances. This is implemented in `ArcaneProgress.PlayerState.load`.
 - Language resource updates also include direct message keys used by node descriptions and aspect crafting outcomes, not only visible screen labels.
 
+### Professional bonus research branches
+
+- Added 15 paper-method research definitions without adding Codex categories or changing the ids, methods, costs, prerequisites, or saved progress of the original research.
+- Attached Fisher to the Foundations branch after `aspect_mixture`, miner luck and the haste fork to Aura after `node_attunement`, Warrior to Wand after `deep_resonance`, and optional Create research to Craft after `table_mastery`.
+- Updated Codex category/map handling so bonus nodes remain in their parent categories; Arcane Table maps are filtered by the category of the inserted note to keep the enlarged research list legible.
+- Added localized English and Russian titles/descriptions for every bonus node and the message shown when Create research is unavailable.
+- Added server-authoritative effects for fishing, ore drops, break speed, mob damage/experience, manual Create crafting, and Create goggles-assisted item collection. The actual event handlers do not run the optional integration unless Create is loaded.
+- Registered the fishing Global Loot Modifier and scoped its data condition to `minecraft:gameplay/fishing`; the global list uses `replace: false`.
+- Restricted `learnFromNote` to paper-method research so the existing completed-note action cannot directly award research that is defined to use immediate aspect payment.
+
 ### Current source line map
 
 The following are the current line locations for the primary implementation points described above. They identify where to start reading the source; they are not a patch-format diff, and line numbers can shift if later edits are made.
@@ -492,6 +564,13 @@ The following are the current line locations for the primary implementation poin
 | `src/main/java/com/fredplenter/research/ArcaneProgress.java` | 119-146 | Result-based `createAspect`; server-side component discovery and point checks, amount calculation, point deductions/grant, result discovery, and dirty marking. |
 | `src/main/java/com/fredplenter/research/ArcaneProgress.java` | 200-249 | Research-path server validation and charging of intermediate cells after every validation succeeds. |
 | `src/main/java/com/fredplenter/research/ArcaneProgress.java` | 265-276, 350-404 | Client snapshot and persistent `PlayerState` data, including old-save discovered-aspect migration. |
+| `src/main/java/com/fredplenter/research/ResearchRegistry.java` | Search for `register("fisher_catch"` through `register("create_cache"` | Original branch extensions: prerequisites, categories, puzzle aspects, normalized layout positions; `requiresCreate`/`isCreateLoaded` gate optional Create nodes. |
+| `src/main/java/com/fredplenter/gameplay/ResearchBonuses.java` | Search for `onBreakSpeed`, `onOreDrops`, `onDamage`, `onExperience`, `onCreateCrafted`, and `onCreateDrops` | NeoForge gameplay event handlers and progress checks for player-specific bonuses. `minerLuckPercent` resolves the highest learned tier. |
+| `src/main/java/com/fredplenter/loot/FisherCatchModifier.java` | Search for `doApply` | Fishing-hook owner check, learned-research lookup, and duplication of the successful non-empty fishing loot result. |
+| `src/main/java/com/fredplenter/registry/ModLootModifiers.java` | Search for `FISHER_CATCH` | Registers `FisherCatchModifier.CODEC` in NeoForge's global loot modifier serializer registry. |
+| `src/main/java/com/fredplenter/research/ArcaneProgress.java` | Search for `learnFromNote` | Accepts only known PAPER research, then checks availability and prerequisites before recording the id. |
+| `src/main/java/com/fredplenter/client/screen/ArcaneCodexScreen.java` | Search for `CATEGORIES`, `filteredResearch`, and `matchesCategory` | Preserves the original five categories; filters the expanded parent-branch research map and presents the optional Create status. |
+| `src/main/java/com/fredplenter/client/screen/ArcaneTableScreen.java` | Search for `researchMapEntries` | Limits displayed research nodes and prerequisite lines to the inserted note's category. |
 | `src/main/java/com/fredplenter/network/CreateAspectPayload.java` | 15-51 | Result-id/max-mode codec, server-player/open-menu checks, authoritative progress call, feedback, and progress resynchronization. |
 | `src/main/java/com/fredplenter/network/NetworkHandler.java` | 19-61 | Payload registration, including `CreateAspectPayload` as a play-to-server message. |
 | `src/main/java/com/fredplenter/client/screen/ArcaneTableScreen.java` | 28-34 | Screen dimensions, recipe-panel position/height, inventory-gap calculation, and hex-board drawing constants. |
@@ -505,6 +584,7 @@ The following are the current line locations for the primary implementation poin
 | `src/main/java/com/fredplenter/client/screen/ArcaneTableFaqScreen.java` | 11-151 | FAQ sections, screen sizing, clipping, generated path diagram, scrollbar and mouse-wheel scrolling. |
 | `src/main/resources/assets/fredplenter/lang/en_us.json` | Search for `recipe_panel`, `faq_title`, and `aspect_created` | English recipe-panel, FAQ, and server-feedback strings. |
 | `src/main/resources/assets/fredplenter/lang/ru_ru.json` | Search for `recipe_panel`, `faq_title`, and `aspect_created` | Matching Russian recipe-panel, FAQ, and server-feedback strings. |
+| `src/main/resources/assets/fredplenter/lang/en_us.json`, `ru_ru.json` | Search for `research.fredplenter.fisher_catch` or `research.fredplenter.create_cache` | Matching translated bonus-branch names/descriptions and the optional dependency message. |
 
 ## Localization
 
@@ -557,7 +637,7 @@ The development server launch is configured in `build.gradle` and can be run wit
 
 The normal build JAR is written to `build/libs/`. A separately copied downloadable JAR is kept at `dist/fredplenter-0.0.1.jar`; after building, copy the freshly built JAR into `dist/` if the downloadable copy should match it.
 
-There are currently no Java test sources (`compileTestJava` and `test` report `NO-SOURCE` during the Gradle build). A successful `build` verifies compilation, resource processing, and packaging; it is not a substitute for a multiplayer or in-game manual test.
+JUnit 5 tests live under `src/test/java/`; the current test covers deterministic vanilla aspect mappings and guard cases. `.\gradlew.bat test` compiles production and test Java sources and runs the unit tests. A successful `build` also verifies resource processing and JAR packaging; neither build nor unit tests substitute for a multiplayer or in-game manual test. The project does not currently include automated in-game tests for fishing loot, event-driven bonus effects, or the optional Create integration.
 
 ## Current limitations
 
@@ -567,6 +647,8 @@ There are currently no Java test sources (`compileTestJava` and `test` report `N
 - Only `en_us` and `ru_ru` translations are shipped by this project.
 - Scribing Tools exist but are optional for creating paper research notes.
 - The research tree is a starter progression, not a complete content catalog.
+- The profession bonus branches are research unlocks for this mod's listed event hooks; they are not universal hooks for every third-party ore, fishing overhaul, mob, or automated Create contraption.
+- Bonus behavior is server-owned and depends on gameplay events carrying a real player attribution. Automation without a player breaker/crafter does not receive personal player bonuses.
 - Essentia jars/transport, infusion altar, golems, and corruption/taint are deferred systems.
 - The current GUI supports player feedback and visually marks likely-available recipes, but the server remains the final authority for every state-changing operation.
 

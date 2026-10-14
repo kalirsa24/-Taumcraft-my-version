@@ -5,6 +5,7 @@ import com.fredplenter.registry.ModBlockEntities;
 import com.fredplenter.registry.ModBlocks;
 import com.fredplenter.registry.ModCreativeTab;
 import com.fredplenter.registry.ModItems;
+import com.fredplenter.registry.ModLootModifiers;
 import com.fredplenter.registry.ModMenuTypes;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -32,6 +33,7 @@ public class Fredplenter {
         ModBlocks.BLOCK_ITEMS.register(modEventBus);
         ModBlockEntities.BLOCK_ENTITIES.register(modEventBus);
         ModMenuTypes.MENUS.register(modEventBus);
+        ModLootModifiers.LOOT_MODIFIERS.register(modEventBus);
         ModCreativeTab.register(modEventBus);
 
         NetworkHandler.register(modEventBus);

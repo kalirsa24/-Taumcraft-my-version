@@ -4,6 +4,7 @@ import com.fredplenter.Fredplenter;
 import com.fredplenter.aspect.Aspect;
 import com.fredplenter.aspect.AspectStack;
 import net.minecraft.resources.ResourceLocation;
+import net.neoforged.fml.ModList;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -64,6 +65,19 @@ public final class ResearchRegistry {
         register("deep_resonance", "wand", 0.86f, 0.84f, Research.Method.PAPER,
                 List.of(id("wand_capacity"), id("node_attunement")),
                 List.of(Aspect.FLAMMA, Aspect.AESTUS, Aspect.LUX));
+        register("focal_casting", "wand", 0.62f, 0.92f, Research.Method.ASPECTS,
+                List.of(id("wand_attunement")),
+                List.of(Aspect.FLATUS, Aspect.FLAMMA, Aspect.LUX),
+                new AspectStack(Aspect.FLATUS, 2), new AspectStack(Aspect.LUX, 2),
+                new AspectStack(Aspect.MOTUS, 2));
+        register("verdant_weaving", "wand", 0.46f, 0.94f, Research.Method.ASPECTS,
+                List.of(id("focal_casting")),
+                List.of(Aspect.HUMUS, Aspect.PULVIS, Aspect.VITA),
+                new AspectStack(Aspect.HUMUS, 3), new AspectStack(Aspect.PULVIS, 2));
+        register("dread_weaving", "wand", 0.78f, 0.92f, Research.Method.ASPECTS,
+                List.of(id("focal_casting")),
+                List.of(Aspect.TENEBRAE, Aspect.MORS, Aspect.SOMNUS),
+                new AspectStack(Aspect.TENEBRAE, 3), new AspectStack(Aspect.MORS, 2));
 
         register("resonant_work", "craft", 0.46f, 0.82f, Research.Method.ASPECTS,
                 List.of(id("wand_attunement"), id("aspect_almanac")),
@@ -76,6 +90,41 @@ public final class ResearchRegistry {
                 List.of(id("ink_and_paper"), id("resonant_work")),
                 List.of(Aspect.FLAMMA, Aspect.CINIS, Aspect.HUMUS),
                 new AspectStack(Aspect.CINIS, 5), new AspectStack(Aspect.MOTUS, 5));
+
+        // Profession perks extend their matching original branch without adding Codex categories.
+        register("fisher_catch", "foundations", 0.84f, 0.84f, Research.Method.PAPER,
+                List.of(id("aspect_mixture")), List.of(Aspect.UNDA, Aspect.LIMUS, Aspect.HUMUS));
+
+        register("miner_luck_10", "aura", 0.12f, 0.68f, Research.Method.PAPER,
+                List.of(id("node_attunement")), List.of(Aspect.HUMUS, Aspect.PULVIS, Aspect.FLATUS));
+        register("miner_luck_15", "aura", 0.34f, 0.68f, Research.Method.PAPER,
+                List.of(id("miner_luck_10")), List.of(Aspect.FLAMMA, Aspect.CINIS, Aspect.HUMUS));
+        register("miner_luck_20", "aura", 0.56f, 0.68f, Research.Method.PAPER,
+                List.of(id("miner_luck_15")), List.of(Aspect.FLATUS, Aspect.PROCELLA, Aspect.UNDA));
+        register("miner_luck_25", "aura", 0.78f, 0.68f, Research.Method.PAPER,
+                List.of(id("miner_luck_20")), List.of(Aspect.FLAMMA, Aspect.VAPOR, Aspect.UNDA));
+        register("miner_luck_30", "aura", 0.78f, 0.86f, Research.Method.PAPER,
+                List.of(id("miner_luck_25")), List.of(Aspect.HUMUS, Aspect.PULVIS, Aspect.FLATUS));
+        register("miner_luck_35", "aura", 0.56f, 0.86f, Research.Method.PAPER,
+                List.of(id("miner_luck_30")), List.of(Aspect.FLAMMA, Aspect.CINIS, Aspect.HUMUS));
+        register("miner_luck_40", "aura", 0.34f, 0.86f, Research.Method.PAPER,
+                List.of(id("miner_luck_35")), List.of(Aspect.LUX, Aspect.VITA, Aspect.HUMUS));
+        register("miner_haste", "aura", 0.12f, 0.86f, Research.Method.PAPER,
+                List.of(id("miner_luck_25")), List.of(Aspect.FLATUS, Aspect.MOTUS, Aspect.HUMUS));
+
+        register("warrior_instinct", "wand", 0.90f, 0.90f, Research.Method.PAPER,
+                List.of(id("deep_resonance")), List.of(Aspect.FLAMMA, Aspect.CINIS, Aspect.HUMUS));
+        register("warrior_fury", "wand", 0.90f, 0.95f, Research.Method.PAPER,
+                List.of(id("warrior_instinct")), List.of(Aspect.TENEBRAE, Aspect.SOMNUS, Aspect.FLATUS));
+        register("warrior_guard", "wand", 0.90f, 0.99f, Research.Method.PAPER,
+                List.of(id("warrior_fury")), List.of(Aspect.LUX, Aspect.VITA, Aspect.HUMUS));
+
+        register("create_schematics", "craft", 0.58f, 0.90f, Research.Method.PAPER,
+                List.of(id("table_mastery")), List.of(Aspect.FLATUS, Aspect.PROCELLA, Aspect.UNDA));
+        register("create_precision", "craft", 0.80f, 0.95f, Research.Method.PAPER,
+                List.of(id("create_schematics")), List.of(Aspect.FLATUS, Aspect.MOTUS, Aspect.HUMUS));
+        register("create_cache", "craft", 0.92f, 0.99f, Research.Method.PAPER,
+                List.of(id("create_precision")), List.of(Aspect.FLAMMA, Aspect.AESTUS, Aspect.UNDA));
     }
 
     public static Map<ResourceLocation, Research> all() {
@@ -91,7 +140,16 @@ public final class ResearchRegistry {
      * of its prerequisites are already learned.
      */
     public static boolean isAvailable(Research research, java.util.Set<ResourceLocation> learned) {
+        if (research == null || requiresCreate(research) && !isCreateLoaded()) return false;
         if (learned.contains(research.id())) return false;
         return learned.containsAll(research.prerequisite());
+    }
+
+    public static boolean requiresCreate(Research research) {
+        return research != null && research.id().getPath().startsWith("create_");
+    }
+
+    public static boolean isCreateLoaded() {
+        return ModList.get() != null && ModList.get().isLoaded("create");
     }
 }

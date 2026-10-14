@@ -7,6 +7,7 @@ import com.fredplenter.research.Research;
 import com.fredplenter.research.ResearchRegistry;
 import com.fredplenter.item.InkwellItem;
 import com.fredplenter.registry.ModItems;
+import com.fredplenter.spell.Spell;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -86,8 +87,8 @@ public class ArcaneCodexScreen extends Screen {
         super.render(graphics, mouseX, mouseY, partialTick);
 
         Research hovered = findResearchAt(mouseX, mouseY);
-        if (hovered != null || selectedResearch != null) {
-            drawResearchTooltip(graphics, hovered == null ? selectedResearch : hovered, mouseX, mouseY);
+        if (hovered != null) {
+            drawResearchTooltip(graphics, hovered, mouseX, mouseY);
         }
     }
 
@@ -201,8 +202,9 @@ public class ArcaneCodexScreen extends Screen {
         boolean available = ResearchRegistry.isAvailable(entry, ClientArcaneProgress.getCompletedResearch());
         List<Component> lines = new ArrayList<>();
         lines.add(Component.translatable(entry.getTranslationKey()).withStyle(style -> style.withColor(0xFFFFE77D)));
-        lines.add(Component.translatable(learned
-                ? "gui.fredplenter.learned"
+        lines.add(Component.translatable(ResearchRegistry.requiresCreate(entry) && !ResearchRegistry.isCreateLoaded()
+                ? "gui.fredplenter.requires_create"
+                : learned ? "gui.fredplenter.learned"
                 : available ? "gui.fredplenter.research_available" : "gui.fredplenter.undiscovered"));
         lines.addAll(wrapTooltipText(Component.translatable(entry.getDescriptionKey()), 188));
         lines.add(Component.translatable(entry.method() == Research.Method.PAPER
@@ -212,6 +214,13 @@ public class ArcaneCodexScreen extends Screen {
             for (com.fredplenter.aspect.AspectStack cost : entry.cost()) {
                 lines.add(Component.translatable("gui.fredplenter.aspect_cost_entry",
                         Component.translatable(cost.aspect().getTranslationKey()), cost.amount()));
+            }
+        }
+        for (Spell spell : Spell.values()) {
+            if (spell.getResearch().equals(entry.id())) {
+                lines.add(Component.translatable("gui.fredplenter.unlocks_spell",
+                        Component.translatable(spell.getTranslationKey()))
+                        .withStyle(style -> style.withColor(0xFFB8E6FF)));
             }
         }
         lines.add(Component.translatable("gui.fredplenter.prerequisites"));

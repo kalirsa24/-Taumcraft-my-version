@@ -10,6 +10,7 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.datafix.DataFixTypes;
@@ -114,6 +115,16 @@ public final class ArcaneProgress extends SavedData {
         PlayerState state = state(playerId);
         ensurePrimals(state);
         return Set.copyOf(state.discoveredAspects);
+    }
+
+    public static void announceNewAspects(ServerPlayer player, Set<Aspect> before) {
+        Set<Aspect> after = get(player).getDiscovered(player.getUUID());
+        for (Aspect aspect : Aspect.values()) {
+            if (after.contains(aspect) && !before.contains(aspect)) {
+                player.displayClientMessage(Component.translatable("message.fredplenter.aspect_discovered",
+                        Component.translatable(aspect.getTranslationKey())), false);
+            }
+        }
     }
 
     public int createAspect(UUID playerId, Aspect result, boolean createMaximum) {
@@ -275,7 +286,7 @@ public final class ArcaneProgress extends SavedData {
 
     public boolean learnFromNote(UUID playerId, ResourceLocation researchId) {
         Research research = ResearchRegistry.get(researchId);
-        if (research == null) {
+        if (research == null || research.method() != Research.Method.PAPER) {
             return false;
         }
         PlayerState state = state(playerId);

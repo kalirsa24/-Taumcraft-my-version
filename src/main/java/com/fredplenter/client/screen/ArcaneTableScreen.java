@@ -16,6 +16,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.Slot;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
@@ -391,6 +392,15 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
         drawInsetPanel(graphics, x, y, width, height, 0xFF503823, 0xFF34271D);
         graphics.drawCenteredString(font, Component.translatable("container.inventory"),
                 leftPos + imageWidth / 2, topPos + INVENTORY_TOP + 2, 0xFFD9C39A);
+        for (int index = 1; index < menu.slots.size(); index++) {
+            Slot slot = menu.slots.get(index);
+            drawSlotFrame(graphics, leftPos + slot.x - 1, topPos + slot.y - 1);
+        }
+    }
+
+    private static void drawSlotFrame(GuiGraphics graphics, int x, int y) {
+        graphics.fill(x, y, x + 18, y + 18, 0xFF8B6B46);
+        graphics.fill(x + 1, y + 1, x + 17, y + 17, 0xFF2A1D14);
     }
 
     private void drawInsetPanel(GuiGraphics graphics, int x, int y, int width, int height,
@@ -569,11 +579,12 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
     }
 
     private void renderResearchMap(GuiGraphics graphics, int mouseX, int mouseY) {
-        for (Research research : researchList) {
+        List<Research> visible = researchMapEntries();
+        for (Research research : visible) {
             int[] child = researchMapPoint(research);
             for (net.minecraft.resources.ResourceLocation prerequisiteId : research.prerequisite()) {
                 Research prerequisite = ResearchRegistry.get(prerequisiteId);
-                if (prerequisite == null) {
+                if (prerequisite == null || !visible.contains(prerequisite)) {
                     continue;
                 }
                 int[] parent = researchMapPoint(prerequisite);
@@ -583,7 +594,7 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
         }
 
         Research hoveredResearch = null;
-        for (Research research : researchList) {
+        for (Research research : visible) {
             int[] point = researchMapPoint(research);
             boolean learned = ClientArcaneProgress.hasResearch(research.id());
             boolean available = menu.isAvailable(research);
@@ -615,8 +626,16 @@ public class ArcaneTableScreen extends AbstractContainerScreen<ArcaneTableMenu> 
                 y + Math.round(workspaceHeight * research.y())};
     }
 
+    private List<Research> researchMapEntries() {
+        Research note = ResearchRegistry.get(menu.getResearchNoteId());
+        String category = note == null ? "" : note.category();
+        return researchList.stream()
+                .filter(entry -> category.isEmpty() || category.equals(entry.category()))
+                .toList();
+    }
+
     private Research findResearchAt(double mouseX, double mouseY) {
-        for (Research research : researchList) {
+        for (Research research : researchMapEntries()) {
             int[] point = researchMapPoint(research);
             if (distanceSquared(mouseX, mouseY, point[0], point[1]) <= 10 * 10) {
                 return research;
