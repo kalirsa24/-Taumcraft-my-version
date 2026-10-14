@@ -64,6 +64,7 @@ Commands can grant/revoke registered research, set an aspect balance, reset all 
 
 - [Technical architecture and validation](docs/ARCHITECTURE.md)
 - [Changelog](CHANGELOG.md)
+- [Contributing](CONTRIBUTING.md)
 - [MIT License](LICENSE)
 
 ## Build from source
