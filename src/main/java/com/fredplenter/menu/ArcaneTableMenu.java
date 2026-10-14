@@ -26,9 +26,9 @@ import java.util.Set;
 public class ArcaneTableMenu extends AbstractContainerMenu {
 
     public static final int NOTE_SLOT_X = 41;
-    public static final int NOTE_SLOT_Y = 146;
-    public static final int PLAYER_INVENTORY_Y = 274;
-    public static final int PLAYER_HOTBAR_Y = 332;
+    public static final int NOTE_SLOT_Y = 136;
+    public static final int PLAYER_INVENTORY_Y = 181;
+    public static final int PLAYER_HOTBAR_Y = 239;
 
     private final ArcaneTableBlockEntity blockEntity;
     @Nullable
@@ -60,6 +60,11 @@ public class ArcaneTableMenu extends AbstractContainerMenu {
                 @Override
                 public boolean mayPlace(net.minecraft.world.item.ItemStack stack) {
                     return blockEntity.canPlaceItem(0, stack);
+                }
+
+                @Override
+                public boolean mayPickup(Player player) {
+                    return ResearchNoteItem.isOwnedBy(blockEntity.getItem(0), player.getUUID());
                 }
             });
         } else {
@@ -111,11 +116,14 @@ public class ArcaneTableMenu extends AbstractContainerMenu {
 
     public boolean beginResearch(ServerPlayer player, ResourceLocation researchId) {
         Research research = ResearchRegistry.get(researchId);
+        ArcaneProgress progress = ArcaneProgress.get(player);
         if (research == null || research.method() != Research.Method.PAPER
                 || !isNoteFor(research) || ResearchNoteItem.isComplete(getNoteStack())
-                || !ResearchRegistry.isAvailable(research, ArcaneProgress.get(player).getCompletedResearch(player.getUUID()))) {
+                || !ResearchRegistry.isAvailable(research, progress.getCompletedResearch(player.getUUID()))
+                || !progress.reserveResearchNote(player.getUUID(), getNoteStack())) {
             return false;
         }
+        blockEntity.setChanged();
         activeResearch = researchId;
         return true;
     }
@@ -125,6 +133,8 @@ public class ArcaneTableMenu extends AbstractContainerMenu {
         if (!researchId.equals(activeResearch)
                 || blockEntity == null
                 || !isNoteFor(ResearchRegistry.get(researchId))
+                || !ResearchNoteItem.claimIfUnowned(getNoteStack(), player.getUUID())
+                || !ResearchNoteItem.isOwnedBy(getNoteStack(), player.getUUID())
                 || ResearchNoteItem.isComplete(getNoteStack())
                 || !ArcaneProgress.get(player).completeResearch(player, researchId, solution, path)) {
             return false;
@@ -157,6 +167,9 @@ public class ArcaneTableMenu extends AbstractContainerMenu {
         }
         Slot slot = slots.get(index);
         if (!slot.hasItem()) {
+            return net.minecraft.world.item.ItemStack.EMPTY;
+        }
+        if (!slot.mayPickup(player)) {
             return net.minecraft.world.item.ItemStack.EMPTY;
         }
         net.minecraft.world.item.ItemStack original = slot.getItem();

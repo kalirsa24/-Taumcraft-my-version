@@ -47,7 +47,8 @@ public record BeginCodexResearchPayload(ResourceLocation researchId) implements 
 
             boolean alreadyHasNote = research != null
                     && research.method() == Research.Method.PAPER
-                    && ArcaneProgress.hasUnfinishedResearchNote(player, payload.researchId());
+                    && (ArcaneProgress.hasResearchNote(player, payload.researchId())
+                    || ArcaneProgress.hasPendingResearchNote(player, payload.researchId()));
             boolean accepted = research != null && !alreadyHasNote
                     && ArcaneProgress.get(player).beginCodexResearch(player, payload.researchId());
             PacketDistributor.sendToPlayer(player,

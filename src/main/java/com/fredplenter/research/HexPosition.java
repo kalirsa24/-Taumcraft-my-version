@@ -9,6 +9,7 @@ public record HexPosition(int q, int r) {
     }
 
     public boolean isOnBoard() {
-        return Math.abs(q) <= 2 && Math.abs(r) <= 2 && Math.abs(q + r) <= 2;
+        return Math.abs((long) q) <= 2 && Math.abs((long) r) <= 2
+                && Math.abs((long) q + r) <= 2;
     }
 }

@@ -74,7 +74,7 @@ public final class ClientScanHandler {
             return;
         }
         ResourceLocation itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(target.getItem());
-        if (!"minecraft".equals(itemId.getNamespace()) || ClientArcaneProgress.hasStudiedItem(itemId)) {
+        if (ClientArcaneProgress.hasStudiedItem(itemId)) {
             resetHover();
             return;
         }
@@ -104,20 +104,16 @@ public final class ClientScanHandler {
             return;
         }
         ResourceLocation itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(event.getItemStack().getItem());
-        if ("minecraft".equals(itemId.getNamespace())) {
-            if (ClientArcaneProgress.hasStudiedItem(itemId)) {
-                event.getToolTip().add(Component.translatable("tooltip.fredplenter.studied").withStyle(ChatFormatting.GREEN));
-            } else if (itemId.equals(hoveredItem) && !scanSent) {
-                long now = System.currentTimeMillis();
-                long remaining = Math.max(
-                        Math.max(0, 2_000L - (now - hoverStartedAt)),
-                        Math.max(0, retryAfterMillis - now));
-                event.getToolTip().add(Component.translatable(
-                        "tooltip.fredplenter.scanning", String.format(Locale.ROOT, "%.1f", remaining / 1_000.0))
-                        .withStyle(ChatFormatting.AQUA));
-            }
-        } else if (canScan(player)) {
-            event.getToolTip().add(Component.translatable("tooltip.fredplenter.unstudyable").withStyle(ChatFormatting.GRAY));
+        if (ClientArcaneProgress.hasStudiedItem(itemId)) {
+            event.getToolTip().add(Component.translatable("tooltip.fredplenter.studied").withStyle(ChatFormatting.GREEN));
+        } else if (itemId.equals(hoveredItem) && !scanSent) {
+            long now = System.currentTimeMillis();
+            long remaining = Math.max(
+                    Math.max(0, 2_000L - (now - hoverStartedAt)),
+                    Math.max(0, retryAfterMillis - now));
+            event.getToolTip().add(Component.translatable(
+                    "tooltip.fredplenter.scanning", String.format(Locale.ROOT, "%.1f", remaining / 1_000.0))
+                    .withStyle(ChatFormatting.AQUA));
         }
     }
 

@@ -1,7 +1,7 @@
 package com.fredplenter.item;
 
 import com.fredplenter.aspect.Aspect;
-import com.fredplenter.aspect.VanillaAspectMap;
+import com.fredplenter.aspect.AspectTagResolver;
 import com.fredplenter.block.entity.AuraNodeBlockEntity;
 import com.fredplenter.network.NetworkHandler;
 import com.fredplenter.research.ArcaneProgress;
@@ -89,14 +89,22 @@ public class AuraScannerItem extends Item {
         }
 
         ResourceLocation blockId = BuiltInRegistries.BLOCK.getKey(state.getBlock());
-        if (!"minecraft".equals(blockId.getNamespace())) {
-            serverPlayer.displayClientMessage(Component.translatable("message.fredplenter.block_unstudyable"), true);
+        ArcaneProgress progress = ArcaneProgress.get(serverPlayer);
+        List<com.fredplenter.aspect.AspectStack> rewards = AspectTagResolver.aspectsFor(
+                new ItemStack(Item.byBlock(state.getBlock())), serverPlayer.serverLevel(),
+                progress.hasResearch(serverPlayer.getUUID(),
+                        ResourceLocation.fromNamespaceAndPath(com.fredplenter.Fredplenter.MODID,
+                                "aspect_almanac")));
+        if (rewards.isEmpty()) {
+            serverPlayer.displayClientMessage(Component.translatable("message.fredplenter.no_aspects_mapped"), true);
             return InteractionResult.CONSUME;
         }
-        ArcaneProgress progress = ArcaneProgress.get(serverPlayer);
         Set<Aspect> before = progress.getDiscovered(serverPlayer.getUUID());
         boolean studied = progress.markItemStudied(
-                serverPlayer.getUUID(), blockId, VanillaAspectMap.aspectsFor(blockId));
+                serverPlayer.getUUID(), blockId, rewards,
+                progress.hasResearch(serverPlayer.getUUID(),
+                        ResourceLocation.fromNamespaceAndPath(com.fredplenter.Fredplenter.MODID,
+                                "basic_observation")));
         ArcaneProgress.announceNewAspects(serverPlayer, before);
         if (studied) {
             serverPlayer.displayClientMessage(Component.translatable("message.fredplenter.item_scanned"), true);

@@ -42,7 +42,7 @@ public record LearnNotePayload(ResourceLocation researchId) implements CustomPac
                 if (stack.getItem() instanceof ResearchNoteItem
                         && ResearchNoteItem.isComplete(stack)
                         && payload.researchId().equals(ResearchNoteItem.researchId(stack))) {
-                    if (ArcaneProgress.get(player).learnFromNote(player.getUUID(), payload.researchId())) {
+                    if (ArcaneProgress.get(player).learnFromNote(player, stack)) {
                         stack.shrink(1);
                         Research research = ResearchRegistry.get(payload.researchId());
                         player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
@@ -51,7 +51,9 @@ public record LearnNotePayload(ResourceLocation researchId) implements CustomPac
                                         research.getTranslationKey())), true);
                     } else {
                         player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
-                                "message.fredplenter.note_unusable"), true);
+                                ResearchNoteItem.isOwnedBy(stack, player.getUUID())
+                                        ? "message.fredplenter.note_unusable"
+                                        : "message.fredplenter.note_not_owner"), true);
                     }
                     NetworkHandler.sendProgress(player);
                     return;

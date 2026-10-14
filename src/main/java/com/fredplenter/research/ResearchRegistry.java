@@ -1,6 +1,7 @@
 package com.fredplenter.research;
 
 import com.fredplenter.Fredplenter;
+import com.fredplenter.FredplenterConfig;
 import com.fredplenter.aspect.Aspect;
 import com.fredplenter.aspect.AspectStack;
 import net.minecraft.resources.ResourceLocation;
@@ -27,7 +28,9 @@ public final class ResearchRegistry {
     private static void register(String path, String category, float x, float y, Research.Method method,
                                  List<ResourceLocation> prereq, List<Aspect> puzzle, AspectStack... cost) {
         ResourceLocation rl = id(path);
-        RESEARCH.put(rl, new Research(rl, prereq, List.of(cost), puzzle, method, category, x, y));
+        List<Aspect> puzzleDefinition = method == Research.Method.PAPER ? puzzle : List.of();
+        RESEARCH.put(rl, new Research(
+                rl, prereq, List.of(cost), puzzleDefinition, method, category, x, y));
     }
 
     static {
@@ -140,9 +143,19 @@ public final class ResearchRegistry {
      * of its prerequisites are already learned.
      */
     public static boolean isAvailable(Research research, java.util.Set<ResourceLocation> learned) {
-        if (research == null || requiresCreate(research) && !isCreateLoaded()) return false;
+        if (research == null || isBonusResearch(research) && !FredplenterConfig.bonusBranchesEnabled()
+                || requiresCreate(research) && !isCreateLoaded()) return false;
         if (learned.contains(research.id())) return false;
         return learned.containsAll(research.prerequisite());
+    }
+
+    public static boolean isBonusResearch(Research research) {
+        if (research == null) {
+            return false;
+        }
+        String path = research.id().getPath();
+        return path.startsWith("miner_") || path.startsWith("warrior_")
+                || path.equals("fisher_catch") || path.startsWith("create_");
     }
 
     public static boolean requiresCreate(Research research) {

@@ -3,13 +3,14 @@ package com.fredplenter.block.entity;
 import com.fredplenter.menu.ArcaneTableMenu;
 import com.fredplenter.registry.ModBlockEntities;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.Container;
+import net.minecraft.world.WorldlyContainer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.core.NonNullList;
@@ -20,7 +21,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 /** Stores the table's research-note slot and its formed-table position link. */
-public class ArcaneTableBlockEntity extends BlockEntity implements MenuProvider, Container {
+public class ArcaneTableBlockEntity extends BlockEntity implements MenuProvider, WorldlyContainer {
 
     @Nullable
     private BlockPos extensionPos;
@@ -119,6 +120,21 @@ public class ArcaneTableBlockEntity extends BlockEntity implements MenuProvider,
     @Override
     public boolean canPlaceItem(int slot, ItemStack stack) {
         return slot == 0 && stack.is(ModItems.RESEARCH_NOTE.get());
+    }
+
+    @Override
+    public int[] getSlotsForFace(Direction side) {
+        return new int[0];
+    }
+
+    @Override
+    public boolean canPlaceItemThroughFace(int slot, ItemStack stack, @Nullable Direction direction) {
+        return false;
+    }
+
+    @Override
+    public boolean canTakeItemThroughFace(int slot, ItemStack stack, Direction direction) {
+        return false;
     }
 
     @Override

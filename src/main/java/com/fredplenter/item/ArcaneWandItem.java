@@ -1,5 +1,6 @@
 package com.fredplenter.item;
 
+import com.fredplenter.FredplenterConfig;
 import com.fredplenter.aspect.Aspect;
 import com.fredplenter.block.entity.AuraNodeBlockEntity;
 import com.fredplenter.research.ArcaneProgress;
@@ -42,6 +43,12 @@ public class ArcaneWandItem extends Item {
     public static final int CAPACITY_PER_ASPECT = 100;
     private static final int USE_COOLDOWN_TICKS = 5;
     private static final String SPELL_KEY = "Spell";
+    private static final ResourceLocation WAND_ATTUNEMENT =
+            ResourceLocation.fromNamespaceAndPath("fredplenter", "wand_attunement");
+    private static final ResourceLocation WAND_CAPACITY =
+            ResourceLocation.fromNamespaceAndPath("fredplenter", "wand_capacity");
+    private static final ResourceLocation DEEP_RESONANCE =
+            ResourceLocation.fromNamespaceAndPath("fredplenter", "deep_resonance");
 
     public ArcaneWandItem(Properties properties) {
         super(properties);
@@ -59,9 +66,14 @@ public class ArcaneWandItem extends Item {
         if (!(context.getPlayer() instanceof ServerPlayer player)) {
             return InteractionResult.PASS;
         }
+        if (!ArcaneProgress.get(player).hasResearch(player.getUUID(), WAND_ATTUNEMENT)) {
+            player.displayClientMessage(Component.translatable("message.fredplenter.wand_attunement_locked"), true);
+            return InteractionResult.CONSUME;
+        }
 
         ItemStack wand = context.getItemInHand();
         CompoundTag stored = getStored(wand);
+        int capacity = capacityPerAspect(learnedBy(player));
         int drained = 0;
         boolean hasCapacity = false;
         boolean nodeHasVis = false;
@@ -69,10 +81,10 @@ public class ArcaneWandItem extends Item {
             if (!aspect.isPrimal()) {
                 continue;
             }
-            int current = Math.max(0, Math.min(CAPACITY_PER_ASPECT, stored.getInt(aspect.getId())));
-            hasCapacity |= current < CAPACITY_PER_ASPECT;
+            int current = Math.max(0, Math.min(maximumCapacityPerAspect(), stored.getInt(aspect.getId())));
+            hasCapacity |= current < capacity;
             nodeHasVis |= node.getVis(aspect) > 0;
-            if (current >= CAPACITY_PER_ASPECT) {
+            if (current >= capacity) {
                 continue;
             }
             int amount = node.extract(aspect, 1);
@@ -118,16 +130,17 @@ public class ArcaneWandItem extends Item {
             player.displayClientMessage(Component.translatable("message.fredplenter.no_spells_learned"), true);
             return;
         }
-        if (stored(wand, spell.getAspect()) < spell.getCost()) {
+        int cost = spellCost(spell, learnedBy(player));
+        if (stored(wand, spell.getAspect()) < cost) {
             player.displayClientMessage(Component.translatable("message.fredplenter.wand_low_vis",
-                    Component.translatable(spell.getAspect().getTranslationKey()), spell.getCost()), true);
+                    Component.translatable(spell.getAspect().getTranslationKey()), cost), true);
             return;
         }
         if (!SpellEffects.apply(spell, player)) {
             player.displayClientMessage(Component.translatable("message.fredplenter.spell_no_target"), true);
             return;
         }
-        drain(wand, spell.getAspect(), spell.getCost());
+        drain(wand, spell.getAspect(), cost);
         player.level().playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME,
                 SoundSource.PLAYERS, 0.8F, 1.3F);
         player.displayClientMessage(Component.translatable("message.fredplenter.spell_cast",
@@ -163,8 +176,21 @@ public class ArcaneWandItem extends Item {
         return researchId -> progress.hasResearch(playerId, researchId);
     }
 
+    public static int capacityPerAspect(Predicate<ResourceLocation> learned) {
+        int baseCapacity = FredplenterConfig.wandVisBaseCap();
+        return learned.test(WAND_CAPACITY) ? maximumCapacityPerAspect() : baseCapacity;
+    }
+
+    private static int maximumCapacityPerAspect() {
+        return (int) Math.min(Integer.MAX_VALUE, (long) FredplenterConfig.wandVisBaseCap() * 2);
+    }
+
+    public static int spellCost(Spell spell, Predicate<ResourceLocation> learned) {
+        return learned.test(DEEP_RESONANCE) ? Math.max(1, spell.getCost() - 1) : spell.getCost();
+    }
+
     public static int stored(ItemStack stack, Aspect aspect) {
-        return Math.max(0, Math.min(CAPACITY_PER_ASPECT, getStored(stack).getInt(aspect.getId())));
+        return Math.max(0, Math.min(maximumCapacityPerAspect(), getStored(stack).getInt(aspect.getId())));
     }
 
     /** Removes {@code amount} of {@code aspect} from the wand if it holds enough. */
@@ -173,7 +199,7 @@ public class ArcaneWandItem extends Item {
             return false;
         }
         CompoundTag stored = getStored(stack);
-        int current = Math.max(0, Math.min(CAPACITY_PER_ASPECT, stored.getInt(aspect.getId())));
+        int current = Math.max(0, Math.min(maximumCapacityPerAspect(), stored.getInt(aspect.getId())));
         if (current < amount) {
             return false;
         }
@@ -185,14 +211,15 @@ public class ArcaneWandItem extends Item {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         int total = 0;
+        int capacityPerAspect = capacityPerAspect(ClientArcaneProgress::hasResearch);
         for (Aspect aspect : Aspect.values()) {
             if (!aspect.isPrimal()) {
                 continue;
             }
-            int amount = stored(stack, aspect);
+            int amount = Math.min(capacityPerAspect, stored(stack, aspect));
             total += amount;
         }
-        int capacity = CAPACITY_PER_ASPECT * 6;
+        int capacity = capacityPerAspect * 6;
         int fillPercent = total * 100 / capacity;
         tooltip.add(Component.translatable("tooltip.fredplenter.wand_capacity", total, capacity, fillPercent));
         Spell chosen = Spell.byId(getStored(stack).getString(SPELL_KEY));
@@ -202,7 +229,8 @@ public class ArcaneWandItem extends Item {
             tooltip.add(Component.translatable("tooltip.fredplenter.wand_no_spell"));
         } else {
             tooltip.add(Component.translatable("tooltip.fredplenter.wand_spell",
-                    Component.translatable(shown.getTranslationKey()), shown.getCost(),
+                    Component.translatable(shown.getTranslationKey()),
+                    spellCost(shown, ClientArcaneProgress::hasResearch),
                     Component.translatable(shown.getAspect().getTranslationKey())));
         }
         tooltip.add(Component.translatable("tooltip.fredplenter.wand_cast_help"));

@@ -1,8 +1,28 @@
-.gradle/
-build/
-bin/
-run/
-.idea/
-.vscode/
+# Gradle and build outputs
+/.gradle/
+/build/
+/bin/
+/out/
+/dist/
+/src/generated/
+*.jar
+!/gradle/wrapper/gradle-wrapper.jar
+
+# Local game runs and logs
+/run/
+/logs/
 *.log
 hs_err_pid*
+
+# IDE and editor state
+/.idea/
+/.vscode/
+/*.iml
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Local modernization tooling state
+/.github/modernize/

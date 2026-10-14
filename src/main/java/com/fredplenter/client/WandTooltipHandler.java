@@ -4,6 +4,7 @@ import com.fredplenter.Fredplenter;
 import com.fredplenter.aspect.Aspect;
 import com.fredplenter.item.ArcaneWandItem;
 import com.fredplenter.registry.ModItems;
+import com.fredplenter.research.ClientArcaneProgress;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -25,6 +26,7 @@ public final class WandTooltipHandler {
         if (!stack.is(ModItems.ARCANE_WAND.get()) || !Screen.hasShiftDown()) {
             return;
         }
+        int capacity = ArcaneWandItem.capacityPerAspect(ClientArcaneProgress::hasResearch);
         event.getToolTip().removeIf(line -> line.getString().equals(
                 Component.translatable("tooltip.fredplenter.wand_shift_hint").getString()));
         for (Aspect aspect : Aspect.values()) {
@@ -32,7 +34,7 @@ public final class WandTooltipHandler {
                 event.getToolTip().add(Component.translatable("tooltip.fredplenter.wand_aspect_charge",
                         Component.translatable(aspect.getTranslationKey())
                                 .withStyle(style -> style.withColor(aspect.getColor())),
-                        ArcaneWandItem.stored(stack, aspect), ArcaneWandItem.CAPACITY_PER_ASPECT));
+                        Math.min(capacity, ArcaneWandItem.stored(stack, aspect)), capacity));
             }
         }
     }

@@ -68,6 +68,7 @@ dependencies {
     // Add additional NeoForge/mod dependencies here, e.g.:
     // implementation "some.other:mod:${some_version}"
     testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testImplementation files(sourceSets.main.compileClasspath)
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 

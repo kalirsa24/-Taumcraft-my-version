@@ -1,6 +1,7 @@
 package com.fredplenter.gameplay;
 
 import com.fredplenter.Fredplenter;
+import com.fredplenter.FredplenterConfig;
 import com.fredplenter.aspect.Aspect;
 import com.fredplenter.network.NetworkHandler;
 import com.fredplenter.research.ArcaneProgress;
@@ -10,6 +11,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -57,10 +59,13 @@ public final class ResearchBonuses {
     }
 
     public static int minerLuckPercent(ServerPlayer player) {
+        if (!FredplenterConfig.bonusBranchesEnabled()) {
+            return 0;
+        }
         ArcaneProgress progress = ArcaneProgress.get(player);
         for (int index = 0; index < LUCK_STEPS.length; index++) {
             if (progress.hasResearch(player.getUUID(), LUCK_IDS[index])) {
-                return LUCK_STEPS[index];
+                return Math.min(LUCK_STEPS[index], FredplenterConfig.minerBonusCap());
             }
         }
         return 0;
@@ -68,6 +73,9 @@ public final class ResearchBonuses {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onBreakSpeed(PlayerEvent.BreakSpeed event) {
+        if (!FredplenterConfig.bonusBranchesEnabled()) {
+            return;
+        }
         Player player = event.getEntity();
         boolean learned = player instanceof ServerPlayer serverPlayer
                 ? has(serverPlayer, MINER_HASTE)
@@ -117,20 +125,32 @@ public final class ResearchBonuses {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onDamage(LivingIncomingDamageEvent event) {
-        if (event.getEntity().level().isClientSide || event.getAmount() <= 0) {
+        if (!FredplenterConfig.bonusBranchesEnabled()
+                || event.getEntity().level().isClientSide || event.getAmount() <= 0) {
             return;
         }
-        if (event.getEntity() instanceof ServerPlayer player && has(player, WARRIOR_DEFENSE)) {
+        if (event.getEntity() instanceof ServerPlayer player && has(player, WARRIOR_DEFENSE)
+                && (FredplenterConfig.bonusesAffectPvp()
+                || !(event.getSource().getEntity() instanceof Player))) {
             event.setAmount(event.getAmount() * 0.80F);
         } else if (event.getEntity() instanceof Mob
+                && !isMajorBoss(event.getEntity())
                 && event.getSource().getEntity() instanceof ServerPlayer player && has(player, WARRIOR_DAMAGE)) {
             event.setAmount(event.getAmount() * 1.30F);
         }
+
+    }
+
+    private static boolean isMajorBoss(net.minecraft.world.entity.LivingEntity entity) {
+        return entity.getType() == EntityType.ENDER_DRAGON
+                || entity.getType() == EntityType.WITHER
+                || entity.getType() == EntityType.WARDEN;
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onExperience(LivingExperienceDropEvent event) {
-        if (!(event.getAttackingPlayer() instanceof ServerPlayer player) || !(event.getEntity() instanceof Mob)
+        if (!FredplenterConfig.bonusBranchesEnabled()
+                || !(event.getAttackingPlayer() instanceof ServerPlayer player) || !(event.getEntity() instanceof Mob)
                 || !has(player, WARRIOR_XP) || event.getDroppedExperience() <= 0) {
             return;
         }
@@ -141,16 +161,18 @@ public final class ResearchBonuses {
 
     @SubscribeEvent
     public static void onCreateCrafted(PlayerEvent.ItemCraftedEvent event) {
-        if (!(event.getEntity() instanceof ServerPlayer player) || player.getAbilities().instabuild
+        if (!FredplenterConfig.bonusBranchesEnabled()
+                || !(event.getEntity() instanceof ServerPlayer player) || player.getAbilities().instabuild
                 || !ResearchRegistry.isCreateLoaded() || event.getCrafting().isEmpty()
                 || !"create".equals(BuiltInRegistries.ITEM.getKey(event.getCrafting().getItem()).getNamespace())) {
             return;
         }
         ArcaneProgress progress = ArcaneProgress.get(player);
-        int motusPoints = Math.min(event.getCrafting().getCount(),
-                ArcaneProgress.MAX_ASPECT_POINTS - progress.getAspectPoints(player.getUUID(), Aspect.MOTUS));
-        if (progress.hasResearch(player.getUUID(), CREATE_SCHEMATICS) && motusPoints > 0) {
-            progress.addAspectPoints(player.getUUID(), Aspect.MOTUS, motusPoints);
+        ResourceLocation craftedItem = BuiltInRegistries.ITEM.getKey(event.getCrafting().getItem());
+        if (progress.hasResearch(player.getUUID(), CREATE_SCHEMATICS)
+                && progress.getAspectPoints(player.getUUID(), Aspect.MOTUS) < FredplenterConfig.knowledgeCap()
+                && progress.markCreateItemCrafted(player.getUUID(), craftedItem)) {
+            progress.addAspectPoints(player.getUUID(), Aspect.MOTUS, 1);
             NetworkHandler.sendProgress(player);
         }
         if (progress.hasResearch(player.getUUID(), CREATE_PRECISION)

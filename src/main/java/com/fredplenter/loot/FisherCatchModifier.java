@@ -1,6 +1,7 @@
 package com.fredplenter.loot;
 
 import com.fredplenter.Fredplenter;
+import com.fredplenter.FredplenterConfig;
 import com.fredplenter.research.ArcaneProgress;
 import com.google.common.base.Suppliers;
 import com.mojang.serialization.MapCodec;
@@ -8,6 +9,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.entity.projectile.FishingHook;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.LootContext;
@@ -30,7 +32,8 @@ public final class FisherCatchModifier extends LootModifier {
 
     @Override
     protected ObjectArrayList<ItemStack> doApply(ObjectArrayList<ItemStack> loot, LootContext context) {
-        if (!(context.getParamOrNull(LootContextParams.THIS_ENTITY) instanceof FishingHook hook)
+        if (!FredplenterConfig.bonusBranchesEnabled()
+                || !(context.getParamOrNull(LootContextParams.THIS_ENTITY) instanceof FishingHook hook)
                 || !(hook.getPlayerOwner() instanceof ServerPlayer player)
                 || !ArcaneProgress.get(player).hasResearch(player.getUUID(), RESEARCH)
                 || loot.isEmpty() || context.getRandom().nextInt(10) != 0) {
@@ -38,7 +41,7 @@ public final class FisherCatchModifier extends LootModifier {
         }
         int originalSize = loot.size();
         for (int index = 0; index < originalSize; index++) {
-            if (!loot.get(index).isEmpty()) {
+            if (!loot.get(index).isEmpty() && loot.get(index).is(ItemTags.FISHES)) {
                 loot.add(loot.get(index).copy());
             }
         }

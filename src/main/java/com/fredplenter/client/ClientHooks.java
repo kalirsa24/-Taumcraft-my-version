@@ -35,7 +35,8 @@ public final class ClientHooks {
     public static void onRightClickItem(PlayerInteractEvent.RightClickItem event) {
         if (event.getItemStack().is(ModItems.ARCANE_CODEX.get())) {
             Minecraft.getInstance().execute(ClientHooks::openCodex);
-        } else if (event.getItemStack().is(ModItems.RESEARCH_NOTE.get())) {
+        } else if (event.getItemStack().is(ModItems.RESEARCH_NOTE.get())
+                && !event.getEntity().isShiftKeyDown()) {
             var stack = event.getItemStack();
             var researchId = ResearchNoteItem.researchId(stack);
             if (researchId != null) {

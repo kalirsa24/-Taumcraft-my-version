@@ -28,6 +28,8 @@ public class Fredplenter {
     public static final String MODID = "fredplenter";
 
     public Fredplenter(IEventBus modEventBus, ModContainer modContainer) {
+        modContainer.registerConfig(net.neoforged.fml.config.ModConfig.Type.SERVER,
+                FredplenterConfig.SPEC);
         ModItems.ITEMS.register(modEventBus);
         ModBlocks.BLOCKS.register(modEventBus);
         ModBlocks.BLOCK_ITEMS.register(modEventBus);
@@ -41,5 +43,6 @@ public class Fredplenter {
         NeoForge.EVENT_BUS.addListener(NetworkHandler::onPlayerRespawned);
         NeoForge.EVENT_BUS.addListener(NetworkHandler::onPlayerChangedDimension);
         NeoForge.EVENT_BUS.addListener(NetworkHandler::onPlayerLoggedOut);
+        NeoForge.EVENT_BUS.addListener(AdminCommands::register);
     }
 }

@@ -188,7 +188,7 @@ public class ArcaneCodexScreen extends Screen {
                     point.x() + NODE_RADIUS + 2, point.y() + NODE_RADIUS + 2, 0xFF090716);
             drawHex(graphics, point.x(), point.y(), NODE_RADIUS + 2, edge);
             drawHex(graphics, point.x(), point.y(), NODE_RADIUS - 2, fill);
-            Aspect icon = entry.puzzle().getFirst();
+            Aspect icon = entry.mapIconAspect();
             drawHex(graphics, point.x(), point.y(), NODE_RADIUS - 2, 0xFF000000 | icon.getColor());
             graphics.drawCenteredString(font, aspectMark(icon), point.x(), point.y() - 4, 0xFFF8EFD9);
             if (hovered) {
@@ -235,11 +235,13 @@ public class ArcaneCodexScreen extends Screen {
         if (entry.method() == Research.Method.PAPER) {
             lines.addAll(wrapTooltipText(Component.translatable("gui.fredplenter.research_materials_desc"), 188));
         }
-        String aspectPath = entry.puzzle().stream()
-                .map(aspect -> Component.translatable(aspect.getTranslationKey()).getString())
-                .collect(java.util.stream.Collectors.joining(" → "));
-        lines.addAll(wrapTooltipText(
-                Component.translatable("gui.fredplenter.research_path").append(": " + aspectPath), 188));
+        if (entry.method() == Research.Method.PAPER) {
+            String aspectPath = entry.puzzle().stream()
+                    .map(aspect -> Component.translatable(aspect.getTranslationKey()).getString())
+                    .collect(java.util.stream.Collectors.joining(" → "));
+            lines.addAll(wrapTooltipText(
+                    Component.translatable("gui.fredplenter.research_path").append(": " + aspectPath), 188));
+        }
 
         int boxWidth = Math.min(210, Math.max(150, lines.stream().mapToInt(font::width).max().orElse(150) + 12));
         int boxHeight = lines.size() * 11 + 8;

@@ -15,17 +15,17 @@ public final class VanillaAspectRules {
             new Rule(Set.of(
                     "ice", "packed_ice", "blue_ice", "snow", "snow_block", "snowball", "water_bucket",
                     "cod", "salmon", "tropical_fish", "pufferfish", "kelp", "dried_kelp", "seagrass",
-                    "sponge", "wet_sponge", "turtle_helmet"), List.of(),
+                    "sponge", "wet_sponge", "turtle_helmet"),
                     Aspect.UNDA, Aspect.VAPOR),
             new Rule(Set.of(
                     "flint_and_steel", "fire_charge", "lava_bucket", "blaze_rod", "blaze_powder",
                     "magma_block", "coal", "charcoal", "campfire", "soul_campfire", "furnace",
-                    "blast_furnace", "smoker"), List.of(),
+                    "blast_furnace", "smoker"),
                     Aspect.FLAMMA, Aspect.AESTUS),
             new Rule(Set.of(
                     "ender_pearl", "ender_eye", "phantom_membrane", "soul_sand", "soul_soil",
                     "wither_skeleton_skull", "obsidian", "spider_eye", "rotten_flesh", "bone", "ink_sac",
-                    "sculk", "sculk_sensor", "sculk_catalyst", "sculk_shrieker"), List.of(),
+                    "sculk", "sculk_sensor", "sculk_catalyst", "sculk_shrieker"),
                     Aspect.TENEBRAE, Aspect.MORS),
             new Rule(Set.of(
                     "feather", "elytra", "breeze_rod", "string", "arrow", "spectral_arrow",
@@ -33,7 +33,8 @@ public final class VanillaAspectRules {
                     "acacia_boat", "dark_oak_boat", "mangrove_boat", "cherry_boat",
                     "oak_chest_boat", "spruce_chest_boat", "birch_chest_boat", "jungle_chest_boat",
                     "acacia_chest_boat", "dark_oak_chest_boat", "minecart", "chest_minecart",
-                    "furnace_minecart", "hopper_minecart", "tnt_minecart"), List.of("rail"),
+                    "furnace_minecart", "hopper_minecart", "tnt_minecart", "rail",
+                    "powered_rail", "detector_rail", "activator_rail"),
                     Aspect.FLATUS, Aspect.PROCELLA),
             new Rule(Set.of(
                     "wooden_sword", "wooden_pickaxe", "wooden_axe", "wooden_shovel", "wooden_hoe",
@@ -44,11 +45,11 @@ public final class VanillaAspectRules {
                     "netherite_sword", "netherite_pickaxe", "netherite_axe", "netherite_shovel",
                     "netherite_hoe", "bow", "crossbow", "trident", "shield", "clock", "compass",
                     "piston", "sticky_piston", "lever", "redstone", "redstone_torch", "observer",
-                    "dispenser", "dropper", "hopper"), List.of(),
+                    "dispenser", "dropper", "hopper"),
                     Aspect.MOTUS, Aspect.PROCELLA),
             new Rule(Set.of(
                     "torch", "soul_torch", "lantern", "soul_lantern", "glowstone", "glow_berries",
-                    "sea_lantern", "shroomlight", "amethyst_shard", "amethyst_cluster"), List.of(),
+                    "sea_lantern", "shroomlight", "amethyst_shard", "amethyst_cluster"),
                     Aspect.LUX, Aspect.VITA),
             new Rule(Set.of(
                     "oak_log", "spruce_log", "birch_log", "jungle_log", "acacia_log", "dark_oak_log",
@@ -59,14 +60,14 @@ public final class VanillaAspectRules {
                     "mangrove_propagule", "cherry_sapling", "wheat", "wheat_seeds",
                     "carrot", "potato", "beetroot", "beetroot_seeds", "apple", "bread", "beef",
                     "cooked_beef", "porkchop", "cooked_porkchop", "chicken", "cooked_chicken",
-                    "egg", "honey_bottle", "red_mushroom", "brown_mushroom"), List.of(),
+                    "egg", "honey_bottle", "red_mushroom", "brown_mushroom"),
                     Aspect.HUMUS, Aspect.VITA),
             new Rule(Set.of(
                     "stone", "cobblestone", "dirt", "sand", "gravel", "iron_ore", "gold_ore",
                     "copper_ore", "diamond_ore", "emerald_ore", "iron_ingot", "gold_ingot",
                     "copper_ingot", "iron_nugget", "gold_nugget", "raw_iron", "raw_gold",
                     "raw_copper", "brick", "deepslate", "granite", "diorite", "andesite",
-                    "diamond", "emerald", "netherite_ingot"), List.of(),
+                    "diamond", "emerald", "netherite_ingot"),
                     Aspect.HUMUS, Aspect.LIMUS));
 
     private VanillaAspectRules() {
@@ -88,9 +89,9 @@ public final class VanillaAspectRules {
         return List.of(new AspectStack(Aspect.FLATUS, 1), new AspectStack(Aspect.PROCELLA, 1));
     }
 
-    private record Rule(Set<String> paths, List<String> prefixes, Aspect primary, Aspect secondary) {
+    private record Rule(Set<String> paths, Aspect primary, Aspect secondary) {
         private boolean matches(String path) {
-            return paths.contains(path) || prefixes.stream().anyMatch(path::startsWith);
+            return paths.contains(path);
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.fredplenter.spell;
 
+import com.fredplenter.FredplenterConfig;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
@@ -7,10 +8,12 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.BonemealableBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.common.CommonHooks;
 
 import java.util.List;
 
@@ -95,9 +98,17 @@ public final class SpellEffects {
             BlockState state = level.getBlockState(target);
             if (state.getBlock() instanceof BonemealableBlock && state.isRandomlyTicking()) {
                 for (int tick = 0; tick < 3; tick++) {
-                    state.randomTick(level, target, level.random);
+                    BlockState before = level.getBlockState(target);
+                    if (!CommonHooks.canCropGrow(level, target, before, true)) {
+                        break;
+                    }
+                    before.randomTick(level, target, level.random);
+                    if (!before.equals(level.getBlockState(target))) {
+                        CommonHooks.fireCropGrowPost(level, target, before);
+                        grown++;
+                        break;
+                    }
                 }
-                grown++;
                 if (grown >= 12) {
                     break;
                 }
@@ -143,6 +154,7 @@ public final class SpellEffects {
         AABB area = player.getBoundingBox().inflate(range);
         return player.level().getEntitiesOfClass(LivingEntity.class, area,
                 entity -> entity != player && entity.isAlive()
+                        && (FredplenterConfig.spellsAffectPlayers() || !(entity instanceof Player))
                         && isInCone(eye, look, entity, range, minAlignment));
     }
 

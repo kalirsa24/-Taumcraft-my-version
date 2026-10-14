@@ -1,5 +1,6 @@
 package com.fredplenter.block.entity;
 
+import com.fredplenter.FredplenterConfig;
 import com.fredplenter.aspect.Aspect;
 import com.fredplenter.aspect.AspectStack;
 import com.fredplenter.registry.ModBlockEntities;
@@ -22,7 +23,6 @@ import java.util.Map;
 
 public class AuraNodeBlockEntity extends BlockEntity {
 
-    private static final int MAX_VIS = 24;
     private static final int REGEN_INTERVAL = 600;
     private final EnumMap<Aspect, Integer> vis = new EnumMap<>(Aspect.class);
     private boolean initialized;
@@ -109,7 +109,7 @@ public class AuraNodeBlockEntity extends BlockEntity {
             Aspect aspect = aspects[selected];
             aspects[selected] = aspects[i];
             aspects[i] = aspect;
-            vis.put(aspect, 8 + random.nextInt(9));
+            vis.put(aspect, Math.min(FredplenterConfig.nodeVisCap(), 8 + random.nextInt(9)));
         }
         setChanged();
     }
@@ -117,7 +117,7 @@ public class AuraNodeBlockEntity extends BlockEntity {
     private void regenerate() {
         boolean changed = false;
         for (Map.Entry<Aspect, Integer> entry : vis.entrySet()) {
-            if (entry.getValue() < MAX_VIS) {
+            if (entry.getValue() < FredplenterConfig.nodeVisCap()) {
                 entry.setValue(entry.getValue() + 1);
                 changed = true;
             }
@@ -146,7 +146,8 @@ public class AuraNodeBlockEntity extends BlockEntity {
         for (Aspect aspect : Aspect.values()) {
             String id = aspect.getId();
             if (storedVis.contains(id, Tag.TAG_INT)) {
-                vis.put(aspect, Math.max(0, Math.min(MAX_VIS, storedVis.getInt(id))));
+                vis.put(aspect, Math.max(0,
+                        Math.min(FredplenterConfig.nodeVisCap(), storedVis.getInt(id))));
             }
         }
         initialized = tag.getBoolean("Initialized");
